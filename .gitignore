@@ -1,8 +1,8 @@
 # Build directories
 build/
+build-*/
 Debug/
 Release/
-*/build/
 out/
 
 # IDE files
@@ -59,3 +59,8 @@ Thumbs.db
 .ninja_deps
 build.ninja
 ninja-win.zip
+
+# Visual Studio build files
+ALL_BUILD.vcxproj*
+ZERO_CHECK.vcxproj*
+RUN_TESTS.vcxproj*
