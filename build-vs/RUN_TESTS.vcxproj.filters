@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\cool\Desktop\aiWebSockets\build-vs\CMakeFiles\c59c0edafcf84fffd098aab6b26aa8a5\RUN_TESTS_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{3E929A48-32EA-38AB-98FA-75F1FE29E294}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

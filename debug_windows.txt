@@ -1,0 +1,56 @@
+# Windows Debugging Guide for Performance Test Hanging Issue
+
+## Method 1: Using Visual Studio Debugger
+1. Open the project in Visual Studio
+2. Set build configuration to Debug
+3. Set breakpoints in performance_test.cpp:
+   - Line 125: Start of receive loop
+   - Line 135: Receive call
+   - Line 222 in Socket.cpp: recv call
+4. Press F5 to start debugging
+5. When it hangs, use "Break All" (Ctrl+Alt+Break)
+6. Check Call Stack and Threads windows
+
+## Method 2: Using WinDbg (if available)
+1. Install WinDbg from Microsoft Store
+2. Run: windbg .\build-debug\Debug\performance_test.exe
+3. When it hangs, break execution (Ctrl+Break)
+4. Use commands:
+   - ~*k - Show all threads' call stacks
+   - !handle - Show handles
+   - !process 0 0 - Show process info
+
+## Method 3: Using Task Manager + Process Explorer
+1. Start performance_test.exe
+2. When it hangs, open Task Manager
+3. Go to Details tab
+4. Right-click performance_test.exe -> "Create dump file"
+5. Analyze dump file in Visual Studio
+
+## Method 4: Add Debug Output (Simplest)
+Add printf statements to track progress:
+
+In performance_test.cpp receive loop:
+```cpp
+printf("DEBUG: bytesReceived=%zu, target=%zu, chunkSize=%zu\n", 
+       bytesReceived, testData.size(), receiveChunkSize);
+printf("DEBUG: About to call Receive...\n");
+auto [receiveResult, chunk] = acceptedSocket->Receive(receiveChunkSize);
+printf("DEBUG: Receive returned: success=%s, chunkSize=%zu\n", 
+       receiveResult.IsSuccess() ? "true" : "false", chunk.size());
+```
+
+In Socket.cpp ReceiveRaw:
+```cpp
+printf("DEBUG: recv called with bufferSize=%zu\n", bufferSize);
+int result = recv(m_socket, (char*)buffer, (int)bufferSize, 0);
+printf("DEBUG: recv returned: %d (WSAGetLastError=%d)\n", result, WSAGetLastError());
+```
+
+## Method 5: Use strace-like tool on Windows
+1. Download Process Monitor (ProcMon) from Microsoft
+2. Filter for performance_test.exe
+3. Monitor network operations and system calls
+
+## Quick Test - Run with Verbose Output
+Start the program and watch for debug output to see exactly where it hangs.

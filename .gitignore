@@ -1,0 +1,61 @@
+# Build directories
+build/
+Debug/
+Release/
+*/build/
+out/
+
+# IDE files
+.vscode/
+.vs/
+*.vcxproj.user
+*.sln.docstates
+
+# Cache directories
+.cache/
+clangd/
+
+# Visual Studio IntelliSense databases
+*.vc.db
+*.vsidx
+SemanticSymbols.db
+CodeChunks.db
+Browse.VC.db
+slnx.sqlite
+
+# Compiled files
+*.exe
+*.lib
+*.dll
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exp
+*.manifest
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Test results
+Testing/
+*.xml
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Build system files
+.ninja_deps
+build.ninja
+ninja-win.zip

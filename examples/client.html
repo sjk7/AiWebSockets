@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.connecting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-connect {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-disconnect {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-send {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-ping {
+            background-color: #ffc107;
+            color: black;
+        }
+        .btn-clear {
+            background-color: #6c757d;
+            color: white;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        input[type="text"], textarea {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .messages {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #f8f9fa;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .message.sent {
+            background-color: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+        .message.received {
+            background-color: #f3e5f5;
+            border-left: 3px solid #9c27b0;
+        }
+        .message.system {
+            background-color: #fff3e0;
+            border-left: 3px solid #ff9800;
+        }
+        .message.error {
+            background-color: #ffebee;
+            border-left: 3px solid #f44336;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .stat {
+            text-align: center;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #495057;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket Test Client</h1>
+        
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="input-group">
+            <input type="text" id="serverUrl" value="ws://localhost:8080" placeholder="WebSocket URL">
+            <button id="connectBtn" class="btn-connect">Connect</button>
+            <button id="disconnectBtn" class="btn-disconnect" disabled>Disconnect</button>
+        </div>
+        
+        <div class="controls">
+            <button id="pingBtn" class="btn-ping" disabled>Send Ping</button>
+            <button id="clearBtn" class="btn-clear">Clear Messages</button>
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="messageInput" placeholder="Type message to send..." disabled>
+            <button id="sendBtn" class="btn-send" disabled>Send</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="messagesSent">0</div>
+                <div class="stat-label">Messages Sent</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="messagesReceived">0</div>
+                <div class="stat-label">Messages Received</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="pingsSent">0</div>
+                <div class="stat-label">Pings Sent</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="pongsReceived">0</div>
+                <div class="stat-label">Pongs Received</div>
+            </div>
+        </div>
+        
+        <h3>Messages</h3>
+        <div id="messages" class="messages"></div>
+    </div>
+
+    <script>
+        class WebSocketTestClient {
+            constructor() {
+                this.ws = null;
+                this.stats = {
+                    messagesSent: 0,
+                    messagesReceived: 0,
+                    pingsSent: 0,
+                    pongsReceived: 0
+                };
+                this.initializeElements();
+                this.attachEventListeners();
+            }
+            
+            initializeElements() {
+                this.statusEl = document.getElementById('status');
+                this.serverUrlEl = document.getElementById('serverUrl');
+                this.connectBtn = document.getElementById('connectBtn');
+                this.disconnectBtn = document.getElementById('disconnectBtn');
+                this.messageInput = document.getElementById('messageInput');
+                this.sendBtn = document.getElementById('sendBtn');
+                this.pingBtn = document.getElementById('pingBtn');
+                this.clearBtn = document.getElementById('clearBtn');
+                this.messagesEl = document.getElementById('messages');
+                
+                // Stats elements
+                this.messagesSentEl = document.getElementById('messagesSent');
+                this.messagesReceivedEl = document.getElementById('messagesReceived');
+                this.pingsSentEl = document.getElementById('pingsSent');
+                this.pongsReceivedEl = document.getElementById('pongsReceived');
+            }
+            
+            attachEventListeners() {
+                this.connectBtn.addEventListener('click', () => this.connect());
+                this.disconnectBtn.addEventListener('click', () => this.disconnect());
+                this.sendBtn.addEventListener('click', () => this.sendMessage());
+                this.pingBtn.addEventListener('click', () => this.sendPing());
+                this.clearBtn.addEventListener('click', () => this.clearMessages());
+                
+                this.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.sendMessage();
+                    }
+                });
+            }
+            
+            connect() {
+                const url = this.serverUrlEl.value.trim();
+                if (!url) {
+                    this.addMessage('Please enter a WebSocket URL', 'error');
+                    return;
+                }
+                
+                try {
+                    this.ws = new WebSocket(url);
+                    this.setupWebSocketHandlers();
+                    this.updateStatus('connecting', 'Connecting...');
+                } catch (error) {
+                    this.addMessage(`Failed to create WebSocket: ${error.message}`, 'error');
+                }
+            }
+            
+            disconnect() {
+                if (this.ws) {
+                    this.ws.close();
+                }
+            }
+            
+            setupWebSocketHandlers() {
+                this.ws.onopen = () => {
+                    this.updateStatus('connected', 'Connected');
+                    this.setControlsEnabled(true);
+                    this.addMessage('Connected to WebSocket server', 'system');
+                };
+                
+                this.ws.onclose = (event) => {
+                    this.updateStatus('disconnected', 'Disconnected');
+                    this.setControlsEnabled(false);
+                    this.addMessage(`Disconnected - Code: ${event.code}, Reason: ${event.reason}`, 'system');
+                    this.ws = null;
+                };
+                
+                this.ws.onerror = (error) => {
+                    this.addMessage(`WebSocket error: ${error}`, 'error');
+                };
+                
+                this.ws.onmessage = (event) => {
+                    this.stats.messagesReceived++;
+                    this.updateStats();
+                    
+                    if (typeof event.data === 'string') {
+                        this.addMessage(`Received: ${event.data}`, 'received');
+                    } else {
+                        this.addMessage(`Received binary data (${event.data.size} bytes)`, 'received');
+                    }
+                };
+            }
+            
+            sendMessage() {
+                const message = this.messageInput.value.trim();
+                if (!message || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                    return;
+                }
+                
+                this.ws.send(message);
+                this.stats.messagesSent++;
+                this.updateStats();
+                this.addMessage(`Sent: ${message}`, 'sent');
+                this.messageInput.value = '';
+            }
+            
+            sendPing() {
+                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                    return;
+                }
+                
+                // Note: WebSocket API doesn't expose ping/pong directly
+                // We send a custom ping message instead
+                const pingMessage = JSON.stringify({ type: 'ping', timestamp: Date.now() });
+                this.ws.send(pingMessage);
+                this.stats.pingsSent++;
+                this.updateStats();
+                this.addMessage('Sent ping', 'sent');
+            }
+            
+            updateStatus(status, message) {
+                this.statusEl.className = `status ${status}`;
+                this.statusEl.textContent = message;
+            }
+            
+            setControlsEnabled(enabled) {
+                this.connectBtn.disabled = enabled;
+                this.disconnectBtn.disabled = !enabled;
+                this.messageInput.disabled = !enabled;
+                this.sendBtn.disabled = !enabled;
+                this.pingBtn.disabled = !enabled;
+            }
+            
+            addMessage(message, type = 'system') {
+                const messageEl = document.createElement('div');
+                messageEl.className = `message ${type}`;
+                messageEl.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                this.messagesEl.appendChild(messageEl);
+                this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+            }
+            
+            clearMessages() {
+                this.messagesEl.innerHTML = '';
+                this.stats = {
+                    messagesSent: 0,
+                    messagesReceived: 0,
+                    pingsSent: 0,
+                    pongsReceived: 0
+                };
+                this.updateStats();
+            }
+            
+            updateStats() {
+                this.messagesSentEl.textContent = this.stats.messagesSent;
+                this.messagesReceivedEl.textContent = this.stats.messagesReceived;
+                this.pingsSentEl.textContent = this.stats.pingsSent;
+                this.pongsReceivedEl.textContent = this.stats.pongsReceived;
+            }
+        }
+        
+        // Initialize the client when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new WebSocketTestClient();
+        });
+    </script>
+</body>
+</html>

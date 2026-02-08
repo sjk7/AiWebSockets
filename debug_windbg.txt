@@ -1,0 +1,51 @@
+# WinDbg Debugging Commands
+
+## 1. Install WinDbg (if not available)
+- Download from Microsoft Store or Microsoft website
+- Install WinDbg Preview
+
+## 2. Start WinDbg
+```cmd
+windbg .\build-debug\Debug\performance_test.exe
+```
+
+## 3. When it hangs, break execution
+- Press Ctrl+Break
+- Or click "Break" in the toolbar
+
+## 4. Key WinDbg Commands
+```
+~*k              # Show all threads' call stacks
+k                # Show current thread call stack
+!handle          # Show all handles
+!process 0 0     # Show process information
+~                # Show thread list
+~1s              # Switch to thread 1
+lm               # Show loaded modules
+!peb             # Show process environment block
+```
+
+## 5. Find the hanging thread
+```
+~*k              # Look for thread stuck in recv()
+~2s              # Switch to that thread (e.g., thread 2)
+k                # Examine its call stack
+```
+
+## 6. Examine variables
+```
+dt Socket 0x...  # Display Socket structure
+dv               # Display local variables
+? bytesReceived  # Evaluate variable
+```
+
+## 7. Continue/Exit
+```
+g                # Continue execution
+q                # Quit WinDbg
+```
+
+## What to look for:
+- Thread stuck in `ws2_32!recv` or similar
+- Socket handle state
+- Variable values in the hanging function
