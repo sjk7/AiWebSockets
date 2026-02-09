@@ -155,8 +155,8 @@ install(DIRECTORY include/
 enable_testing()
 
 # Test executable for HttpClient
-add_executable(BasicHttpClientTest examples/BasicHttpClientTest.cpp)
-target_link_libraries(BasicHttpClientTest aiWebSockets ${PLATFORM_LIBS})
+add_executable(HttpClientTest examples/HttpClientTest.cpp)
+target_link_libraries(HttpClientTest aiWebSockets ${PLATFORM_LIBS})
 
 # Test executable
 add_executable(aiWebSocketsTests tests/main.cpp)

@@ -8,11 +8,16 @@
 #include <chrono>
 #include <algorithm>
 
+// Helper function for network byte order (avoid redeclaration)
+uint16_t my_htons(uint16_t hostshort) {
+    return (hostshort << 8) | ((hostshort >> 8) & 0xFF);
+}
+
 namespace nob {
 
-	// Static member definitions
-	std::atomic<int> Socket::s_socketCount{ 0 };
-	std::mutex Socket::s_initMutex;
+    // Static member definitions
+    std::atomic<int> Socket::s_socketCount{ 0 };
+    std::mutex Socket::s_initMutex;
 
 	Socket::Socket()
 		: m_isBlocking(true)
@@ -95,8 +100,8 @@ Socket::~Socket() {
 			}
 		}
 
-		int af = (family == socketFamily::IPV4) ? AF_INET : AF_INET6;
-		int sockType = (type == socketType::TCP) ? SOCK_STREAM : SOCK_DGRAM;
+		int af = (family == socketFamily::IPV4) ? AF_INET_VALUE : AF_INET_VALUE;
+		int sockType = (type == socketType::TCP) ? SOCK_STREAM_VALUE : SOCK_DGRAM;
 		int protocol = (type == socketType::TCP) ? IPPROTO_TCP : IPPROTO_UDP;
 
 		return createNativeSocket(af, sockType, protocol);
@@ -111,38 +116,27 @@ Socket::~Socket() {
 		bool isIPv6 = isIPv6Address(address);
 		
 		if (isIPv6 || address == "::") {
-			// IPv6 binding
-			struct sockaddr_in6 addr6;
-			std::memset(&addr6, 0, sizeof(addr6));
-			addr6.sin6_family = AF_INET6;
-			addr6.sin6_port = htons(port);
-			
-			if (address.empty() || address == "::") {
-				addr6.sin6_addr = in6addr_any;
-			} else {
-				if (inet_pton(AF_INET6, address.c_str(), &addr6.sin6_addr) != 1) {
-					return Result(ErrorCode::invalidParameter, "Invalid IPv6 address: " + address);
-				}
-			}
-			
-			return bindNativeSocket(&addr6, sizeof(addr6));
+			// IPv6 binding - not supported by current SocketAddress (IPv4 only)
+			// For now, return error for IPv6
+			return Result(ErrorCode::invalidParameter, "IPv6 not supported by current SocketAddress");
 		} else {
 			// IPv4 binding (default)
-			struct sockaddr_in addr;
-			std::memset(&addr, 0, sizeof(addr));
-			addr.sin_family = AF_INET;
-			addr.sin_port = htons(port);
+			SocketBase::SocketAddress addr;
+			addr.setFamily(AF_INET_VALUE);
+			addr.setPort(my_htons(port));
 
 			if (address.empty() || address == "0.0.0.0") {
-				addr.sin_addr.s_addr = INADDR_ANY;
+				addr.setAddress(INADDR_ANY);
 			}
 			else {
-				if (inet_pton(AF_INET, address.c_str(), &addr.sin_addr) != 1) {
+				uint32_t addressValue;
+				if (inet_pton(AF_INET_VALUE, address.c_str(), &addressValue) != 1) {
 					return Result(ErrorCode::invalidParameter, "Invalid IPv4 address: " + address);
 				}
+				addr.setAddress(addressValue);
 			}
 
-			return bindNativeSocket(&addr, sizeof(addr));
+			return bindNativeSocket(addr);
 		}
 	}
 
@@ -163,12 +157,10 @@ Socket::~Socket() {
 			return { Result(ErrorCode::invalidParameter, "Socket not created"), nullptr };
 		}
 
-		// Use a large enough buffer for both IPv4 and IPv6 addresses
-		sockaddr_storage clientAddr;
-		socklen_t clientAddrLen = sizeof(clientAddr);
-		std::memset(&clientAddr, 0, sizeof(clientAddr));
-
-		NativeSocketTypes::SocketType clientSocket = acceptNativeSocket(&clientAddr, &clientAddrLen);
+		// Use type-safe SocketAddress for IPv4 only
+		SocketBase::SocketAddress clientAddr;
+		
+		NativeSocketTypes::SocketType clientSocket = acceptNativeSocket(clientAddr);
 		if (clientSocket == INVALID_SOCKET_NATIVE) {
 			return { Result(ErrorCode::socketAcceptFailed, getLastSystemErrorCode()), nullptr };
 		}
@@ -182,16 +174,17 @@ Socket::~Socket() {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
-		struct sockaddr_in addr;
-		std::memset(&addr, 0, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(port);
-
-		if (inet_pton(AF_INET, address.c_str(), &addr.sin_addr) != 1) {
+		SocketBase::SocketAddress addr;
+		uint32_t addressValue = INADDR_ANY;
+		if (inet_pton(AF_INET_VALUE, address.c_str(), &addressValue) != 1) {
 			return Result(ErrorCode::invalidParameter, "Invalid IPv4 address: " + address);
 		}
+		
+		addr.setFamily(AF_INET_VALUE);
+		addr.setAddress(addressValue);
+		addr.setPort(my_htons(port));
 
-		return connectNativeSocket(&addr, sizeof(addr));
+		return connectNativeSocket(addr);
 	}
 
 	Result Socket::shutdown() {
@@ -384,15 +377,23 @@ Socket::~Socket() {
 			return "";
 		}
 
-		struct sockaddr_in addr;
-		int addrLen = sizeof(addr);
-
-		Result result = getSocketNameNative(&addr, &addrLen);
+		// Use type-safe SocketAddress
+		SocketBase::SocketAddress addr;
+		Result result = getSocketNameNative(addr);
 		if (result.isError()) {
 			return "";
 		}
 
-		return getAddressString((struct sockaddr*)&addr);
+		// Convert SocketAddress to string
+		char buffer[INET_ADDRSTRLEN];
+		struct sockaddr_in sockAddr;
+		sockAddr.sin_family = addr.family;
+		sockAddr.sin_addr.s_addr = addr.getAddress();
+		sockAddr.sin_port = addr.getPort();
+		memset(sockAddr.sin_zero, 0, sizeof(sockAddr.sin_zero));
+
+		inet_ntop(AF_INET, &sockAddr.sin_addr, buffer, INET_ADDRSTRLEN);
+		return std::string(buffer);
 	}
 
 	uint16_t Socket::localPort() const {
@@ -400,15 +401,14 @@ Socket::~Socket() {
 			return 0;
 		}
 
-		struct sockaddr_in addr;
-		int addrLen = sizeof(addr);
-
-		Result result = getSocketNameNative(&addr, &addrLen);
+		// Use type-safe SocketAddress
+		SocketBase::SocketAddress addr;
+		Result result = getSocketNameNative(addr);
 		if (result.isError()) {
 			return 0;
 		}
 
-		return ntohs(addr.sin_port);
+		return ntohs(addr.getPort());
 	}
 
 	std::string Socket::remoteAddress() const {
@@ -416,15 +416,23 @@ Socket::~Socket() {
 			return "";
 		}
 
-		struct sockaddr_in addr;
-		int addrLen = sizeof(addr);
-
-		Result result = getPeerNameNative(&addr, &addrLen);
+		// Use type-safe SocketAddress
+		SocketBase::SocketAddress addr;
+		Result result = getPeerNameNative(addr);
 		if (result.isError()) {
 			return "";
 		}
 
-		return getAddressString((struct sockaddr*)&addr);
+		// Convert SocketAddress to string
+		char buffer[INET_ADDRSTRLEN];
+		struct sockaddr_in sockAddr;
+		sockAddr.sin_family = addr.family;
+		sockAddr.sin_addr.s_addr = addr.getAddress();
+		sockAddr.sin_port = addr.getPort();
+		memset(sockAddr.sin_zero, 0, sizeof(sockAddr.sin_zero));
+
+		inet_ntop(AF_INET, &sockAddr.sin_addr, buffer, INET_ADDRSTRLEN);
+		return std::string(buffer);
 	}
 
 	uint16_t Socket::remotePort() const {
@@ -432,15 +440,14 @@ Socket::~Socket() {
 			return 0;
 		}
 
-		struct sockaddr_in addr;
-		int addrLen = sizeof(addr);
-
-		Result result = getPeerNameNative(&addr, &addrLen);
+		// Use type-safe SocketAddress
+		SocketBase::SocketAddress addr;
+		Result result = getPeerNameNative(addr);
 		if (result.isError()) {
 			return 0;
 		}
 
-		return ntohs(addr.sin_port);
+		return ntohs(addr.getPort());
 	}
 
 	std::string Socket::getAddressString(const struct sockaddr* addr) {
@@ -477,103 +484,39 @@ Socket::~Socket() {
 	}
 
 	bool Socket::isPortAvailable(uint16_t port, const std::string& address) {
+		// Note: address parameter is currently unused but kept for API compatibility
+		(void)address; // Suppress unused parameter warning
+		
 		// Initialize socket system if needed (since this is a static method)
 		Result initResult = InitializeSocketSystem();
 		if (!initResult.isSuccess()) {
-			printf("DEBUG: IsPortAvailable - Failed to initialize socket system: %s\n", initResult.getErrorMessage().c_str());
 			return false;
 		}
-
-		// Determine if this is IPv6 or IPv4
-		bool isIPv6 = isIPv6Address(address);
 		
-		NativeSocketTypes::SocketType testSocket;
-		void* addrPtr;
-		socklen_t addrLen;
+		// Create a temporary SocketBase instance to test port availability
+		SocketBase testSocket;
 		
-		if (isIPv6 || address == "::") {
-			// IPv6 test
-			testSocket = socket(AF_INET6, SOCK_STREAM, 0);
-			if (testSocket == INVALID_SOCKET_NATIVE) {
-				printf("DEBUG: IsPortAvailable - Failed to create IPv6 test socket\n");
-				CleanupSocketSystem();
-				return false;
-			}
-			
-			struct sockaddr_in6 addr6;
-			std::memset(&addr6, 0, sizeof(addr6));
-			addr6.sin6_family = AF_INET6;
-			addr6.sin6_port = htons(port);
-			
-			if (address.empty() || address == "::") {
-				addr6.sin6_addr = in6addr_any;
-			} else {
-				if (inet_pton(AF_INET6, address.c_str(), &addr6.sin6_addr) != 1) {
-					printf("DEBUG: IsPortAvailable - Invalid IPv6 address: %s\n", address.c_str());
-#ifdef _WIN32
-					closesocket(testSocket);
-#else
-					close(testSocket);
-#endif
-					CleanupSocketSystem();
-					return false;
-				}
-			}
-			
-			addrPtr = &addr6;
-			addrLen = sizeof(addr6);
-		} else {
-			// IPv4 test (default)
-			testSocket = socket(AF_INET, SOCK_STREAM, 0);
-			if (testSocket == INVALID_SOCKET_NATIVE) {
-				printf("DEBUG: IsPortAvailable - Failed to create IPv4 test socket\n");
-				CleanupSocketSystem();
-				return false;
-			}
-			
-			struct sockaddr_in addr;
-			std::memset(&addr, 0, sizeof(addr));
-			addr.sin_family = AF_INET;
-			addr.sin_port = htons(port);
-
-			if (address.empty() || address == "0.0.0.0") {
-				addr.sin_addr.s_addr = INADDR_ANY;
-			}
-			else {
-				if (inet_pton(AF_INET, address.c_str(), &addr.sin_addr) != 1) {
-					printf("DEBUG: IsPortAvailable - Invalid IPv4 address: %s\n", address.c_str());
-#ifdef _WIN32
-					closesocket(testSocket);
-#else
-					close(testSocket);
-#endif
-					CleanupSocketSystem();
-					return false;
-				}
-			}
-			
-			addrPtr = &addr;
-			addrLen = sizeof(addr);
+		// Create test socket using abstract
+		Result result = testSocket.createNativeSocket(AF_INET_VALUE, SOCK_STREAM_VALUE, 0);
+		if (result.isError()) {
+			CleanupSocketSystem();
+			return false;
 		}
-
+		
+		// Create address for binding
+		SocketBase::SocketAddress addr;
+		addr.setFamily(AF_INET_VALUE);
+		addr.setAddress(INADDR_ANY);
+		addr.setPort(my_htons(port));
+		
 		// Try to bind to the port
-		int result = ::bind(testSocket, (struct sockaddr*)addrPtr, addrLen);
-		printf("DEBUG: IsPortAvailable - bind() result for port %d: %d\n", port, result);
-
-		// Close the test socket
-#ifdef _WIN32
-		closesocket(testSocket);
-#else
-		close(testSocket);
-#endif
-
-		// Clean up socket system since we initialized it
+		result = testSocket.bindNativeSocket(addr);
+		
+		// Clean up
+		testSocket.closeNativeSocket();
 		CleanupSocketSystem();
-
-		// If bind succeeded, port is available
-		bool available = (result == 0);
-		printf("DEBUG: IsPortAvailable - Port %d is %s\n", port, available ? "available" : "in use");
-		return available;
+		
+		return result.isSuccess();
 	}
 
 	std::vector<std::string> Socket::getLocalIPAddresses() {
@@ -599,11 +542,14 @@ Socket::~Socket() {
 		hints.ai_socktype = SOCK_STREAM;
 		
 		// Use RAII wrapper for automatic cleanup
-		AddrInfo addrInfo = GetAddrInfo(hostname, nullptr, (struct addrinfo*)&hints);
-		if (!addrInfo.isValid()) {
+		ADDRINFOA* result = nullptr;
+		int getaddrResult = GetAddrInfoA(hostname, nullptr, &hints, &result);
+		if (getaddrResult != 0) {
 			WSACleanup();
 			return ipAddresses; // Return empty list on error
 		}
+		
+		AddrInfo addrInfo((struct addrinfo*)result, true);
 		
 		// Extract all IP addresses using range-based for loop
 		for (const auto& addr : addrInfo) {
@@ -704,7 +650,7 @@ Socket::~Socket() {
 		}
 	}
 
-	SocketAddress Socket::getSocketAddress(const struct sockaddr* addr) {
+	std::pair<std::string, uint16_t> Socket::getSocketAddress(const struct sockaddr* addr) {
 		if (!addr) {
 			return { "", 0 };
 		}
@@ -724,20 +670,23 @@ Socket::~Socket() {
 			return { Result(ErrorCode::invalidParameter, "Socket not created"), {"", 0} };
 		}
 
-		struct sockaddr addr;
-		int addrLen = sizeof(addr);
-
-		Result result = getSocketNameNative(&addr, &addrLen);
+		// Use type-safe SocketAddress
+		SocketBase::SocketAddress addr;
+		Result result = getSocketNameNative(addr);
 		if (result.isError()) {
 			return { result, {"", 0} };
 		}
 
-		SocketAddress address = getSocketAddress(&addr);
-		if (address.first.empty()) {
-			return { Result(ErrorCode::socketAddressParseFailed, "Failed to parse socket address"), {"", 0} };
-		}
+		// Convert SocketAddress to string representation
+		char buffer[INET_ADDRSTRLEN];
+		struct sockaddr_in sockAddr;
+		sockAddr.sin_family = addr.family;
+		sockAddr.sin_addr.s_addr = addr.getAddress();
+		sockAddr.sin_port = addr.getPort();
+		memset(sockAddr.sin_zero, 0, sizeof(sockAddr.sin_zero));
 
-		return { Result(), address };
+		inet_ntop(AF_INET, &sockAddr.sin_addr, buffer, INET_ADDRSTRLEN);
+		return { result, {buffer, ntohs(addr.getPort())} };
 	}
 
 	// Event Loop Implementation
@@ -889,10 +838,9 @@ Socket::~Socket() {
 
 	void Socket::handleAcceptEvent() {
 		// Try to accept a connection
-		sockaddr_in clientAddr;
-		int clientAddrLen = sizeof(clientAddr);
-
-		NativeSocketTypes::SocketType clientSocket = acceptNativeSocket(&clientAddr, &clientAddrLen);
+		SocketBase::SocketAddress clientAddr;
+		
+		NativeSocketTypes::SocketType clientSocket = acceptNativeSocket(clientAddr);
 
 		if (clientSocket != 
 #ifdef _WIN32

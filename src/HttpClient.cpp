@@ -2,10 +2,18 @@
 
 #include "WebSocket/HttpClient.h"
 #include "WebSocket/ErrorCodes.h"
+#include <iostream>
 #include <sstream>
-#include <fstream>
-#include <chrono>
 #include <iomanip>
+#include <thread>
+#include <chrono>
+#include <cstring>
+#include <fstream>
+
+// Helper function for network byte order
+uint16_t htons(uint16_t hostshort) {
+    return (hostshort << 8) | ((hostshort >> 8) & 0xFF);
+}
 
 namespace nob {
 
@@ -106,47 +114,75 @@ std::string HttpClient::getCurrentTime() {
     return "Mon, 01 Jan 2024 00:00:00 GMT";
 }
 
-bool HttpClient::connectToHost(const std::string& host, int port) {
-    // Create socket using SocketBase firewall
-    Result result = createNativeSocket(AF_INET, SOCK_STREAM, 0);
+bool HttpClient::connectToHost(const std::string& host, int port, std::chrono::milliseconds timeout) {
+    // Create socket using SocketBase abstract
+    Result result = createNativeSocket(AF_INET_VALUE, SOCK_STREAM_VALUE, 0);
     if (result.isError()) {
+        std::cerr << result.errorMessage() << std::endl;
         return false;
     }
     
-    // Set timeout using SocketBase
-    Result timeoutResult = setBlocking(false);
-    if (timeoutResult.isError()) {
-        return false;
-    }
-    
-    // For now, we'll use a simple approach with localhost
-    // In a real implementation, we'd need DNS resolution through SocketBase
-    // This is a limitation of the current firewall design
-    
-    // Create address structure
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    
-    // Try to resolve hostname (this would ideally be in SocketBase)
-    struct hostent* host_entry = gethostbyname(host.c_str());
-    if (!host_entry) {
-        return false;
-    }
-    
-    memcpy(&addr.sin_addr, host_entry->h_addr_list[0], host_entry->h_length);
-    
-    // Connect using SocketBase firewall
-    result = connectNativeSocket(&addr, sizeof(addr));
+    // Use SocketBase's DNS resolution method (abstract compliant)
+    SocketBase::SocketAddress addr;
+    result = resolveHostname(host, addr);
     if (result.isError()) {
-        // Try blocking connect
-        Result blockingResult = setBlocking(true);
-        if (blockingResult.isError()) {
-            return false;
-        }
-        result = connectNativeSocket(&addr, sizeof(addr));
-        if (result.isError()) {
-            return false;
+        std::cerr << result.errorMessage() << std::endl;
+        closeNativeSocket();
+        return false;
+    }
+    
+    // Set port using our helper function
+    addr.setPort(htons(port));
+    
+    // Non-blocking connection loop with timeout
+    result = connectNativeSocket(addr);
+    if (result.isError()) {
+        // On non-blocking sockets, connect typically returns EINPROGRESS/WSAEWOULDBLOCK
+        // This is expected, so we wait for the connection to complete
+        auto startTime = std::chrono::steady_clock::now();
+        
+        while (true) {
+            // Check for timeout
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - startTime).count();
+            
+            if (elapsed > timeout.count()) {
+                std::cerr << "Connection timeout after " << timeout.count() << "ms for " << host << std::endl;
+                return false;
+            }
+            
+            // Check if socket is ready for writing (connection complete)
+            bool canWrite = false;
+            bool canRead = false;
+            Result selectResult = selectNativeSocket(100, &canRead, &canWrite); // 100ms timeout
+            
+            if (selectResult.isError()) {
+                std::cerr << selectResult.errorMessage() << std::endl;
+                return false;
+            }
+            
+            if (canWrite) {
+                // Connection is ready, check if it succeeded
+                int error = 0;
+                size_t errorSize = sizeof(error);
+                Result getResult = getSocketOptionNative(SOL_SOCKET_VALUE, SO_ERROR_VALUE, &error, &errorSize);
+                
+                if (getResult.isError()) {
+                    std::cerr << getResult.errorMessage() << std::endl;
+                    return false;
+                }
+                
+                if (error == 0) {
+                    // Connection successful
+                    return true;
+                } else {
+                    std::cerr << "Connection failed: " << error << std::endl;
+                    return false;
+                }
+            }
+            
+            // Small delay to prevent busy waiting
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
     
@@ -272,7 +308,7 @@ std::string HttpClient::urlEncode(const std::string& str) {
     return encoded;
 }
 
-HttpResponse HttpClient::get(const std::string& url) {
+HttpResponse HttpClient::get(const std::string& url, std::chrono::milliseconds timeout) {
     ParsedUrl parsed = parseUrl(url);
     
     // Update headers
@@ -282,8 +318,8 @@ HttpResponse HttpClient::get(const std::string& url) {
     // Build request
     std::string request = buildRequest("GET", parsed.path, m_headers);
     
-    // Connect and send
-    if (!connectToHost(parsed.host, parsed.port)) {
+    // Connect and send with timeout
+    if (!connectToHost(parsed.host, parsed.port, timeout)) {
         return HttpResponse(); // Connection failed
     }
     

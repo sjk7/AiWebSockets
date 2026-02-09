@@ -100,7 +100,7 @@ public:
 
     // Helper methods for address conversion
     static std::string getAddressString(const struct sockaddr* addr);
-    static SocketAddress getSocketAddress(const struct sockaddr* addr);
+    static std::pair<std::string, uint16_t> getSocketAddress(const struct sockaddr* addr);
 
     // Additional async I/O methods (delegated to SocketBase)
     Result initializeAsyncIO();

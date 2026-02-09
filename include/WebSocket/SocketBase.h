@@ -1,7 +1,9 @@
 #pragma once
 
 #include <memory>
-#include "OS.h"  // Include OS.h to get the correct opaque types
+#include <string>
+#include <chrono>
+#include <cstdint>
 
 namespace nob {
 
@@ -9,107 +11,75 @@ namespace nob {
 class SocketImpl;
 class Result;
 
+// Native socket type definitions (abstract compliant)
+namespace NativeSocketTypes {
+#ifdef _WIN32
+    using SocketType = void*;  // Opaque pointer type for Windows
+#else
+    using SocketType = int;     // Opaque integer type for Unix
+#endif
+}
+
+// Socket constants (abstract compliant)
+constexpr int AF_INET_VALUE = 2;
+constexpr int SOCK_STREAM_VALUE = 1;
+constexpr int SOL_SOCKET_VALUE = 1;
+constexpr int SO_ERROR_VALUE = 100;
+
+// Constants for invalid sockets
+constexpr NativeSocketTypes::SocketType INVALID_SOCKET_NATIVE = 
+#ifdef _WIN32
+    nullptr;
+#else
+    static_cast<NativeSocketTypes::SocketType>(-1);
+#endif
+
 /**
- * @brief SocketBase - Compiler firewall class that shields users from native socket headers
+ * @brief SocketBase - Compiler abstract class that shields users from native socket headers
  * 
- * This class provides a clean interface without exposing native socket types
- * or platform-specific headers to the user. All native socket operations
- * are handled through the pimpl pattern.
+ * This class provides a platform-independent interface for socket operations.
+ * It hides all native socket details behind the compiler abstract using Pimpl pattern.
+ * No native socket headers are exposed in the public interface.
  */
 class SocketBase {
 public:
-    /**
-     * @brief Default constructor - creates an invalid socket
-     */
     SocketBase();
-
-    /**
-     * @brief Destructor - ensures proper cleanup
-     */
-    ~SocketBase();
-
-    /**
-     * @brief Move constructor
-     * @param other Socket to move from
-     */
+    virtual ~SocketBase();
+    
+    // Disable copying, allow moving
+    SocketBase(const SocketBase&) = delete;
+    SocketBase& operator=(const SocketBase&) = delete;
     SocketBase(SocketBase&& other) noexcept;
-
-    /**
-     * @brief Move assignment operator
-     * @param other Socket to move from
-     * @return Reference to this Socket
-     */
     SocketBase& operator=(SocketBase&& other) noexcept;
-
-    /**
-     * @brief Check if socket is valid
-     * @return True if socket is valid, false otherwise
-     */
+    
+    // Basic socket operations
     bool isValid() const;
-
-protected:
-    /**
-     * @brief Get the implementation pointer
-     * @return Pointer to SocketImpl
-     */
-    SocketImpl* getImpl() const;
-
-    /**
-     * @brief Get native socket handle
-     * @return Native socket handle
-     */
     NativeSocketTypes::SocketType getNativeSocket() const;
-
-    /**
-     * @brief Set native socket handle
-     * @param nativeSocket Native socket handle
-     */
     void setNativeSocket(NativeSocketTypes::SocketType nativeSocket);
-
-    /**
-     * @brief Create native socket
-     * @param family Address family
-     * @param type Socket type
-     * @param protocol Protocol
-     * @return Result of operation
-     */
+    
+    // Type-safe address structures (abstract compliant)
+    struct SocketAddress {
+        int family;
+        uint32_t addr;  // IPv4 address in network byte order
+        uint16_t port;  // Port in network byte order
+        
+        SocketAddress() : family(AF_INET_VALUE), addr(0), port(0) {}
+        SocketAddress(uint32_t address, uint16_t port) : family(AF_INET_VALUE), addr(address), port(port) {}
+        
+        // Helper methods for common operations
+        void setAddress(uint32_t address) { addr = address; }
+        void setPort(uint16_t port) { this->port = port; }
+        void setFamily(int family) { this->family = family; }
+        uint32_t getAddress() const { return addr; }
+        uint16_t getPort() const { return port; }
+    };
+    
+    // Native socket operations (abstract compliant)
     Result createNativeSocket(int family, int type, int protocol);
-
-    /**
-     * @brief Bind native socket
-     * @param addr Socket address
-     * @param addrLen Address length
-     * @return Result of operation
-     */
-    Result bindNativeSocket(const void* addr, int addrLen);
-
-    /**
-     * @brief Listen on native socket
-     * @param backlog Backlog size
-     * @return Result of operation
-     */
+    Result bindNativeSocket(const SocketAddress& addr);
     Result listenNativeSocket(int backlog);
-
-    /**
-     * @brief Accept connection on native socket
-     * @param addr Client address
-     * @param addrLen Address length
-     * @return Native socket handle
-     */
-    NativeSocketTypes::SocketType acceptNativeSocket(void* addr, int* addrLen);
-
-    /**
-     * @brief Connect native socket
-     * @param addr Socket address
-     * @param addrLen Address length
-     * @return Result of operation
-     */
-    Result connectNativeSocket(const void* addr, int addrLen);
-
-    /**
-     * @brief Close native socket
-     * @return Result of operation
-     */
+    NativeSocketTypes::SocketType acceptNativeSocket(SocketAddress& addr);
+    Result connectNativeSocket(const SocketAddress& addr);
     Result closeNativeSocket();
 
     // Additional native operations that need to be moved from Socket.cpp
@@ -118,10 +88,13 @@ protected:
     Result shutdownNativeSocket(int how);
     Result setSocketOptionNative(int level, int option, const void* value, size_t length);
     Result getSocketOptionNative(int level, int option, void* value, size_t* length) const;
-    Result getSocketNameNative(void* addr, int* addrLen) const;
-    Result getPeerNameNative(void* addr, int* addrLen) const;
+    Result getSocketNameNative(SocketAddress& addr) const;
+    Result getPeerNameNative(SocketAddress& addr) const;
     Result setBlocking(bool blocking);
     Result selectNativeSocket(int timeoutMs, bool* canRead, bool* canWrite) const;
+    
+    // DNS resolution methods
+    Result resolveHostname(const std::string& hostname, SocketAddress& addr);
     
     // Async I/O operations
     Result initializeAsyncIO();

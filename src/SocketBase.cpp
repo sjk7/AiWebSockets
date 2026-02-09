@@ -1,6 +1,9 @@
 #include "WebSocket/SocketBase.h"
-#include "WebSocket/ErrorCodes.h"
 #include "WebSocket/OS.h"
+#include "WebSocket/ErrorCodes.h"
+#include <memory>
+#include <cstring>
+#include <algorithm>
 
 // All native socket headers are now included in OS.h
 
@@ -68,10 +71,6 @@ bool SocketBase::isValid() const {
     return m_impl && m_impl->isValid;
 }
 
-SocketImpl* SocketBase::getImpl() const {
-    return m_impl.get();
-}
-
 NativeSocketTypes::SocketType SocketBase::getNativeSocket() const {
     if (!m_impl) {
 #ifdef _WIN32
@@ -121,15 +120,23 @@ Result SocketBase::createNativeSocket(int family, int type, int protocol) {
     return Result();
 }
 
-Result SocketBase::bindNativeSocket(const void* addr, int addrLen) {
+Result SocketBase::bindNativeSocket(const SocketAddress& addr) {
     if (!m_impl || !m_impl->isValid) {
         return Result(ErrorCode::invalidParameter, "Socket not valid");
     }
-    
-    if (::bind(m_impl->socket, static_cast<const struct sockaddr*>(addr), addrLen) != 0) {
+
+    // Convert SocketAddress to sockaddr_in
+    struct sockaddr_in sockAddr;
+    sockAddr.sin_family = addr.family;
+    sockAddr.sin_addr.s_addr = addr.addr;
+    sockAddr.sin_port = addr.port;
+    memset(sockAddr.sin_zero, 0, sizeof(sockAddr.sin_zero));
+
+    // Native socket operation (hidden from public interface)
+    if (::bind(m_impl->socket, reinterpret_cast<const struct sockaddr*>(&sockAddr), sizeof(sockAddr)) != 0) {
         return Result(ErrorCode::socketBindFailed, getLastSystemErrorCode());
     }
-    
+
     return Result();
 }
 
@@ -145,7 +152,7 @@ Result SocketBase::listenNativeSocket(int backlog) {
     return Result();
 }
 
-NativeSocketTypes::SocketType SocketBase::acceptNativeSocket(void* addr, int* addrLen) {
+NativeSocketTypes::SocketType SocketBase::acceptNativeSocket(SocketAddress& addr) {
     if (!isValid()) {
 #ifdef _WIN32
         return reinterpret_cast<NativeSocketTypes::SocketType>(INVALID_SOCKET);
@@ -154,29 +161,43 @@ NativeSocketTypes::SocketType SocketBase::acceptNativeSocket(void* addr, int* ad
 #endif
     }
 
+    // Convert SocketAddress to sockaddr_in
+    struct sockaddr_in sockAddr;
+    sockAddr.sin_family = addr.family;
+    sockAddr.sin_addr.s_addr = addr.addr;
+    sockAddr.sin_port = addr.port;
+    memset(sockAddr.sin_zero, 0, sizeof(sockAddr.sin_zero));
+
+    int addrLen = sizeof(sockAddr);
+    SOCKET nativeClientSocket = ::accept(m_impl->socket, reinterpret_cast<struct sockaddr*>(&sockAddr), &addrLen);
+    
+    if (nativeClientSocket == INVALID_SOCKET) {
+        return INVALID_SOCKET_NATIVE;
+    }
+    
+    // Convert native socket to abstract type
+    NativeSocketTypes::SocketType clientSocket = 
 #ifdef _WIN32
-    SOCKET clientSocket = ::accept(m_impl->socket, (struct sockaddr*)addr, (socklen_t*)addrLen);
+        reinterpret_cast<NativeSocketTypes::SocketType>(nativeClientSocket);
 #else
-    int clientSocket = ::accept(m_impl->socket, (struct sockaddr*)addr, (socklen_t*)addrLen);
+        static_cast<NativeSocketTypes::SocketType>(nativeClientSocket);
 #endif
 
-    if (clientSocket == 
-#ifdef _WIN32
-        INVALID_SOCKET
-#else
-        -1
-#endif
-    ) {
-#ifdef _WIN32
-        return reinterpret_cast<NativeSocketTypes::SocketType>(INVALID_SOCKET);
-#else
-        return static_cast<NativeSocketTypes::SocketType>(-1);
-#endif
-    }
+    // Update the SocketAddress with the client address
+    addr.family = sockAddr.sin_family;
+    addr.addr = sockAddr.sin_addr.s_addr;
+    addr.port = sockAddr.sin_port;
 
     // Create new SocketImpl for the accepted socket
     auto newImpl = std::make_unique<SocketImpl>();
-    newImpl->socket = clientSocket;
+    
+    // Convert abstract socket type back to native for SocketImpl
+#ifdef _WIN32
+    newImpl->socket = reinterpret_cast<SOCKET>(clientSocket);
+#else
+    newImpl->socket = static_cast<int>(clientSocket);
+#endif
+    
     newImpl->isValid = true;
     newImpl->asyncEnabled = m_impl->asyncEnabled;
     
@@ -189,16 +210,24 @@ NativeSocketTypes::SocketType SocketBase::acceptNativeSocket(void* addr, int* ad
 
     // Replace current impl with new one
     m_impl = std::move(newImpl);
-    
+
     return reinterpret_cast<NativeSocketTypes::SocketType>(clientSocket);
 }
 
-Result SocketBase::connectNativeSocket(const void* addr, int addrLen) {
+Result SocketBase::connectNativeSocket(const SocketAddress& addr) {
     if (!m_impl || !m_impl->isValid) {
         return Result(ErrorCode::invalidParameter, "Socket not valid");
     }
     
-    if (::connect(m_impl->socket, static_cast<const struct sockaddr*>(addr), addrLen) != 0) {
+    // Convert SocketAddress to sockaddr_in
+    struct sockaddr_in sockAddr;
+    sockAddr.sin_family = addr.family;
+    sockAddr.sin_addr.s_addr = addr.addr;
+    sockAddr.sin_port = addr.port;
+    memset(sockAddr.sin_zero, 0, sizeof(sockAddr.sin_zero));
+    
+    // Native socket operation (hidden from public interface)
+    if (::connect(m_impl->socket, reinterpret_cast<const struct sockaddr*>(&sockAddr), sizeof(sockAddr)) != 0) {
         return Result(ErrorCode::socketConnectFailed, getLastSystemErrorCode());
     }
     
@@ -318,26 +347,28 @@ Result SocketBase::getSocketOptionNative(int level, int option, void* value, siz
     return Result();
 }
 
-Result SocketBase::getSocketNameNative(void* addr, int* addrLen) const {
+Result SocketBase::getSocketNameNative(SocketAddress& addr) const {
     if (!isValid()) {
         return Result(ErrorCode::invalidParameter, "Socket not created");
     }
 
-    if (getsockname(m_impl->socket, (struct sockaddr*)addr, (socklen_t*)addrLen) != 0) {
+    // Convert SocketAddress to sockaddr_in
+    struct sockaddr_in sockAddr;
+    sockAddr.sin_family = addr.family;
+    sockAddr.sin_addr.s_addr = addr.addr;
+    sockAddr.sin_port = addr.port;
+    memset(sockAddr.sin_zero, 0, sizeof(sockAddr.sin_zero));
+
+    int addrLen = sizeof(sockAddr);
+    // Native socket operation (hidden from public interface)
+    if (getsockname(m_impl->socket, reinterpret_cast<struct sockaddr*>(&sockAddr), &addrLen) != 0) {
         return Result(ErrorCode::unknownError, getLastSystemErrorCode());
     }
 
-    return Result();
-}
-
-Result SocketBase::getPeerNameNative(void* addr, int* addrLen) const {
-    if (!isValid()) {
-        return Result(ErrorCode::invalidParameter, "Socket not created");
-    }
-
-    if (getpeername(m_impl->socket, (struct sockaddr*)addr, (socklen_t*)addrLen) != 0) {
-        return Result(ErrorCode::unknownError, getLastSystemErrorCode());
-    }
+    // Update the SocketAddress with the actual socket address
+    addr.family = sockAddr.sin_family;
+    addr.addr = sockAddr.sin_addr.s_addr;
+    addr.port = sockAddr.sin_port;
 
     return Result();
 }
@@ -554,6 +585,61 @@ Result SocketBase::receiveAsync(void* buffer, size_t bufferSize, size_t* bytesRe
     *bytesReceived = result;
     return Result();
 #endif
+}
+
+Result SocketBase::resolveHostname(const std::string& hostname, SocketAddress& addr) {
+    if (!addr.family) {
+        return Result(ErrorCode::invalidParameter, "Invalid address parameters");
+    }
+
+    // Use getaddrinfo for DNS resolution (this is the modern approach)
+    struct addrinfo hints = {};
+    hints.ai_family = AF_INET; // Force IPv4 for simplicity
+    hints.ai_socktype = SOCK_STREAM;
+    
+    struct addrinfo* results = nullptr;
+    int ret = getaddrinfo(hostname.c_str(), nullptr, &hints, &results);
+    
+    if (ret != 0 || !results) {
+        return Result(ErrorCode::unknownError, getLastSystemErrorCode());
+    }
+    
+    // Copy the first result (IPv4)
+    if (results->ai_family == AF_INET) {
+        struct sockaddr_in* sockAddr = reinterpret_cast<struct sockaddr_in*>(results->ai_addr);
+        addr.family = results->ai_family;
+        addr.addr = sockAddr->sin_addr.s_addr;
+        addr.port = sockAddr->sin_port;
+    }
+    
+    freeaddrinfo(results);
+    return Result();
+}
+
+Result SocketBase::getPeerNameNative(SocketAddress& addr) const {
+    if (!isValid()) {
+        return Result(ErrorCode::invalidParameter, "Socket not created");
+    }
+
+    // Convert SocketAddress to sockaddr_in
+    struct sockaddr_in sockAddr;
+    sockAddr.sin_family = addr.family;
+    sockAddr.sin_addr.s_addr = addr.addr;
+    sockAddr.sin_port = addr.port;
+    memset(sockAddr.sin_zero, 0, sizeof(sockAddr.sin_zero));
+
+    int addrLen = sizeof(sockAddr);
+    // Native socket operation (hidden from public interface)
+    if (getpeername(m_impl->socket, reinterpret_cast<struct sockaddr*>(&sockAddr), &addrLen) != 0) {
+        return Result(ErrorCode::unknownError, getLastSystemErrorCode());
+    }
+
+    // Update the SocketAddress with the actual peer address
+    addr.family = sockAddr.sin_family;
+    addr.addr = sockAddr.sin_addr.s_addr;
+    addr.port = sockAddr.sin_port;
+
+    return Result();
 }
 
 bool SocketBase::isAsyncEnabled() const {

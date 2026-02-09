@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <chrono>
 
 namespace nob {
 
@@ -62,9 +63,10 @@ public:
     /**
      * @brief Perform HTTP GET request
      * @param url Target URL (e.g., "https://www.google.com")
+     * @param timeout Optional timeout (default: 30s)
      * @return HTTP response
      */
-    HttpResponse get(const std::string& url);
+    HttpResponse get(const std::string& url, std::chrono::milliseconds timeout = std::chrono::milliseconds(30000));
 
     /**
      * @brief Perform HTTP POST request
@@ -108,7 +110,7 @@ private:
     HttpResponse parseResponse(const std::string& response);
     
     // Connection methods (using SocketBase firewall)
-    bool connectToHost(const std::string& host, int port);
+    bool connectToHost(const std::string& host, int port, std::chrono::milliseconds timeout = std::chrono::milliseconds(30000));
     std::string sendHttpRequest(const std::string& request);
     std::string receiveHttpResponse();
     
