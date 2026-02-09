@@ -1,5 +1,5 @@
 #include "WebSocket/Socket.h"
-#include "WebSocket/AddrInfoGuard.h"
+#include "WebSocket/AddrInfo.h"
 #include "WebSocket/ErrorCodes.h"
 #include "WebSocket/OS.h"
 #include <string>
@@ -169,7 +169,7 @@ Socket::~Socket() {
 		std::memset(&clientAddr, 0, sizeof(clientAddr));
 
 		NativeSocketTypes::SocketType clientSocket = acceptNativeSocket(&clientAddr, &clientAddrLen);
-		if (clientSocket == NativeSocketTypes::INVALID_SOCKET) {
+		if (clientSocket == INVALID_SOCKET_NATIVE) {
 			return { Result(ErrorCode::socketAcceptFailed, getLastSystemErrorCode()), nullptr };
 		}
 
@@ -199,10 +199,11 @@ Socket::~Socket() {
 			return Result();
 		}
 
+		auto nativeSocket = getNativeSocket();
 #ifdef _WIN32
-		int result = ::shutdown(m_sock, SD_BOTH);
+		int result = ::shutdown(reinterpret_cast<SOCKET>(nativeSocket), SD_BOTH);
 #else
-		int result = ::shutdown(m_sock, SHUT_RDWR);
+		int result = ::shutdown(static_cast<int>(nativeSocket), SHUT_RDWR);
 #endif
 
 		if (result == SOCKET_ERROR) {
@@ -221,13 +222,8 @@ Socket::~Socket() {
 		// Graceful shutdown first
 		shutdown();
 
-#ifdef _WIN32
-		int result = closesocket(m_sock);
-#else
-		int result = close(m_sock);
-#endif
-
-		m_sock = NativeSocketTypes::INVALID_SOCKET;
+		// Use the inherited closeNativeSocket method
+		Result result = closeNativeSocket();
 
 		// Automatic socket system cleanup - thread-safe with reference counting
 		{
@@ -239,7 +235,7 @@ Socket::~Socket() {
 			}
 		}
 
-		if (result != 0) {
+		if (result.isError()) {
 			updateLastError();
 			return Result(ErrorCode::unknownError, getLastSystemErrorCode());
 		}
@@ -258,12 +254,13 @@ Socket::~Socket() {
 
 		size_t totalSent = 0;
 		const char* buffer = static_cast<const char*>(data);
+		auto nativeSocket = getNativeSocket();
 
 		while (totalSent < length) {
 #ifdef _WIN32
-			int result = ::send(m_sock, buffer + totalSent, (int)(length - totalSent), 0);
+			int result = ::send(reinterpret_cast<SOCKET>(nativeSocket), buffer + totalSent, (int)(length - totalSent), 0);
 #else
-			ssize_t result = ::send(m_sock, buffer + totalSent, length - totalSent, 0);
+			ssize_t result = ::send(static_cast<int>(nativeSocket), buffer + totalSent, length - totalSent, 0);
 #endif
 
 			if (result < 0) {
@@ -278,10 +275,8 @@ Socket::~Socket() {
 			}
 
 			totalSent += result;
-			// printf("DEBUG: Send progress: %zu bytes this call, %zu total\n", (size_t)result, totalSent);
 		}
 
-		// printf("DEBUG: Send completed successfully - %zu bytes sent\n", totalSent);
 		return { Result(), totalSent };
 	}
 
@@ -294,10 +289,11 @@ Socket::~Socket() {
 			return { Result(ErrorCode::invalidParameter, "Invalid buffer parameters"), {} };
 		}
 
+		auto nativeSocket = getNativeSocket();
 #ifdef _WIN32
-		int result = recv(m_sock, (char*)buffer, (int)bufferSize, 0);
+		int result = recv(reinterpret_cast<SOCKET>(nativeSocket), (char*)buffer, (int)bufferSize, 0);
 #else
-		ssize_t result = recv(m_sock, buffer, bufferSize, 0);
+		ssize_t result = recv(static_cast<int>(nativeSocket), buffer, bufferSize, 0);
 #endif
 
 		if (result < 0) {
@@ -338,10 +334,15 @@ Socket::~Socket() {
 			return {Result(ErrorCode::invalidParameter, "Socket is not valid"), {}};
 		}
 
+		auto nativeSocket = getNativeSocket();
 		// Use select() to implement timeout
 		fd_set readfds;
 		FD_ZERO(&readfds);
-		FD_SET(m_sock, &readfds);
+#ifdef _WIN32
+		FD_SET(reinterpret_cast<SOCKET>(nativeSocket), &readfds);
+#else
+		FD_SET(static_cast<int>(nativeSocket), &readfds);
+#endif
 
 		struct timeval timeout;
 		timeout.tv_sec = timeoutMs / 1000;
@@ -349,9 +350,9 @@ Socket::~Socket() {
 
 		int selectResult = select(
 #ifdef _WIN32
-			m_sock + 1,
+			reinterpret_cast<SOCKET>(nativeSocket) + 1,
 #else
-			m_sock + 1,
+			static_cast<int>(nativeSocket) + 1,
 #endif
 			&readfds, nullptr, nullptr, &timeout);
 
@@ -383,21 +384,22 @@ Socket::~Socket() {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
+		auto nativeSocket = getNativeSocket();
 #ifdef _WIN32
 		u_long mode = blocking ? 0 : 1;
-		int result = ioctlsocket(m_sock, FIONBIO, &mode);
+		int result = ioctlsocket(reinterpret_cast<SOCKET>(nativeSocket), FIONBIO, &mode);
 		if (result != 0) {
 			updateLastError();
 			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
 		}
 #else
-		int flags = fcntl(m_sock, F_GETFL, 0);
+		int flags = fcntl(static_cast<int>(nativeSocket), F_GETFL, 0);
 		if (flags == -1) {
 			updateLastError();
 			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
 		}
 
-		int result = fcntl(m_sock, F_SETFL, blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK));
+		int result = fcntl(static_cast<int>(nativeSocket), F_SETFL, blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK));
 		if (result == -1) {
 			updateLastError();
 			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
@@ -429,7 +431,7 @@ Socket::~Socket() {
 	}
 
 	bool Socket::isValid() const {
-		return m_sock != NativeSocketTypes::INVALID_SOCKET;
+		return SocketBase::isValid();
 	}
 
 	bool Socket::isBlocking() const {
@@ -441,10 +443,11 @@ Socket::~Socket() {
 			return "";
 		}
 
+		auto nativeSocket = getNativeSocket();
 		struct sockaddr_in addr;
 		socklen_t addrLen = sizeof(addr);
 
-		if (getsockname(m_sock, (struct sockaddr*)&addr, &addrLen) != 0) {
+		if (getsockname(reinterpret_cast<SOCKET>(nativeSocket), (struct sockaddr*)&addr, &addrLen) != 0) {
 			return "";
 		}
 
@@ -456,10 +459,11 @@ Socket::~Socket() {
 			return 0;
 		}
 
+		auto nativeSocket = getNativeSocket();
 		struct sockaddr_in addr;
 		socklen_t addrLen = sizeof(addr);
 
-		if (getsockname(m_sock, (struct sockaddr*)&addr, &addrLen) != 0) {
+		if (getsockname(reinterpret_cast<SOCKET>(nativeSocket), (struct sockaddr*)&addr, &addrLen) != 0) {
 			return 0;
 		}
 
@@ -471,10 +475,11 @@ Socket::~Socket() {
 			return "";
 		}
 
+		auto nativeSocket = getNativeSocket();
 		struct sockaddr_in addr;
 		socklen_t addrLen = sizeof(addr);
 
-		if (getpeername(m_sock, (struct sockaddr*)&addr, &addrLen) != 0) {
+		if (getpeername(reinterpret_cast<SOCKET>(nativeSocket), (struct sockaddr*)&addr, &addrLen) != 0) {
 			return "";
 		}
 
@@ -547,7 +552,7 @@ Socket::~Socket() {
 		if (isIPv6 || address == "::") {
 			// IPv6 test
 			testSocket = socket(AF_INET6, SOCK_STREAM, 0);
-			if (testSocket == NativeSocketTypes::INVALID_SOCKET) {
+			if (testSocket == INVALID_SOCKET_NATIVE) {
 				printf("DEBUG: IsPortAvailable - Failed to create IPv6 test socket\n");
 				CleanupSocketSystem();
 				return false;
@@ -578,7 +583,7 @@ Socket::~Socket() {
 		} else {
 			// IPv4 test (default)
 			testSocket = socket(AF_INET, SOCK_STREAM, 0);
-			if (testSocket == NativeSocketTypes::INVALID_SOCKET) {
+			if (testSocket == INVALID_SOCKET_NATIVE) {
 				printf("DEBUG: IsPortAvailable - Failed to create IPv4 test socket\n");
 				CleanupSocketSystem();
 				return false;
@@ -652,8 +657,8 @@ Socket::~Socket() {
 		hints.ai_socktype = SOCK_STREAM;
 		
 		// Use RAII wrapper for automatic cleanup
-		AddrInfoGuard addrInfo = GetAddrInfo(hostname, nullptr, &hints);
-		if (!addrInfo) {
+		AddrInfo addrInfo = GetAddrInfo(hostname, nullptr, &hints);
+		if (!addrInfo.isValid()) {
 			WSACleanup();
 			return ipAddresses; // Return empty list on error
 		}
@@ -1100,7 +1105,7 @@ Socket::~Socket() {
 
 		NativeSocketTypes::SocketType clientSocket = ::accept(m_sock, (struct sockaddr*)&clientAddr, &clientAddrLen);
 
-		if (clientSocket != NativeSocketTypes::INVALID_SOCKET) {
+		if (clientSocket != INVALID_SOCKET_NATIVE) {
 			// Successfully accepted a connection
 			auto newSocket = createFromNative(clientSocket);
 			if (newSocket) {

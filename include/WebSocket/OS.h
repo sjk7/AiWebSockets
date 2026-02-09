@@ -18,6 +18,7 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/epoll.h>
+#include <netdb.h>
 #endif
 
 namespace nob {

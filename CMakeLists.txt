@@ -91,6 +91,7 @@ include_directories(include)
 set(SOCKET_SOURCES
     src/Socket.cpp
     src/SocketBase.cpp
+    src/AddrInfo.cpp
     src/WebSocketProtocol.cpp
     src/ErrorCodes.cpp
     src/WebSocketServerLite.cpp
@@ -106,7 +107,7 @@ set(WEBSOCKET_HEADERS
     include/WebSocket/ErrorCodes.h
     include/WebSocket/TestUtilities.h
     include/WebSocket/Types.h
-    include/WebSocket/AddrInfoGuard.h
+    include/WebSocket/AddrInfo.h
     include/WebSocket/OS.h
 )
 
