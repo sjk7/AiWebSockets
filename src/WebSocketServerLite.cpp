@@ -86,7 +86,7 @@ Result WebSocketServerLite::Stop() {
     m_running = false;
     
     if (m_serverSocket) {
-        m_serverSocket->Close();
+        m_serverSocket->close();
         m_serverSocket.reset();
     }
     
@@ -121,13 +121,13 @@ void WebSocketServerLite::ProcessEvents() {
     }
     
     // Accept new connections
-    auto acceptResult = m_serverSocket->Accept();
+    auto acceptResult = m_serverSocket->accept();
     if (acceptResult.first.IsSuccess() && acceptResult.second) {
         std::string clientIP = GetClientIP(*acceptResult.second); // No HTTP request yet for initial connection
         
         if (m_securityEnabled && !IsConnectionAllowed(clientIP)) {
             std::cout << "🚫 Connection rejected: " << clientIP << " (security limits exceeded)" << std::endl;
-            acceptResult.second->Close();
+            acceptResult.second->close();
             return;
         }
         
@@ -159,7 +159,7 @@ Result WebSocketServerLite::InitializeServer() {
         family = SOCKET_FAMILY::IPV6;
     }
     
-    auto createResult = m_serverSocket->Create(family, SOCKET_TYPE::TCP);
+    auto createResult = m_serverSocket->create(family, SOCKET_TYPE::TCP);
     if (!createResult.IsSuccess()) {
         m_serverSocket.reset();
         return createResult;
@@ -179,14 +179,14 @@ Result WebSocketServerLite::InitializeServer() {
     }
     
     // Bind to address and port
-    auto bindResult = m_serverSocket->Bind(m_bindAddress, m_port);
+    auto bindResult = m_serverSocket->bind(m_bindAddress, m_port);
     if (!bindResult.IsSuccess()) {
         m_serverSocket.reset();
         return bindResult;
     }
     
     // Start listening
-    auto listenResult = m_serverSocket->Listen(128);
+    auto listenResult = m_serverSocket->listen(128);
     if (!listenResult.IsSuccess()) {
         m_serverSocket.reset();
         return listenResult;

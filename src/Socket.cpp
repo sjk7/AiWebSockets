@@ -64,7 +64,7 @@ namespace WebSocket {
 		// Only close if we haven't been closed already
 		// Close() will handle the reference counting
 		if (Valid()) {
-			Close();
+			close();
 		}
 		// Note: If socket was already closed, reference counting was already handled in Close()
 	}
@@ -81,7 +81,7 @@ namespace WebSocket {
 
 	Socket& Socket::operator=(Socket&& other) noexcept {
 		if (this != &other) {
-			Close();
+			close();
 			m_socket = other.m_socket;
 			m_isBlocking = other.m_isBlocking;
 			m_isListening = other.m_isListening;
@@ -111,7 +111,7 @@ namespace WebSocket {
 #endif
 	}
 
-	Result Socket::Create(SOCKET_FAMILY family, SOCKET_TYPE type) {
+	Result Socket::create(SOCKET_FAMILY family, SOCKET_TYPE type) {
 		if (Valid()) {
 			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket already created");
 		}
@@ -142,7 +142,7 @@ namespace WebSocket {
 		return Result();
 	}
 
-	Result Socket::Bind(const std::string& address, uint16_t port) {
+	Result Socket::bind(const std::string& address, uint16_t port) {
 		if (!Valid()) {
 			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
 		}
@@ -165,7 +165,7 @@ namespace WebSocket {
 				}
 			}
 			
-			if (bind(m_socket, (struct sockaddr*)&addr6, sizeof(addr6)) != 0) {
+			if (::bind(m_socket, (struct sockaddr*)&addr6, sizeof(addr6)) != 0) {
 				UpdateLastError();
 				int systemErrorCode = GetLastSystemErrorCode();
 				std::string systemError = GetSystemErrorMessage(systemErrorCode);
@@ -192,7 +192,7 @@ namespace WebSocket {
 				}
 			}
 
-			if (bind(m_socket, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+			if (::bind(m_socket, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
 				UpdateLastError();
 				int systemErrorCode = GetLastSystemErrorCode();
 				// Provide more specific error message for port in use
@@ -210,12 +210,12 @@ namespace WebSocket {
 		return Result();
 	}
 
-	Result Socket::Listen(int backlog) {
+	Result Socket::listen(int backlog) {
 		if (!Valid()) {
 			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
 		}
 
-		if (listen(m_socket, backlog) != 0) {
+		if (::listen(m_socket, backlog) != 0) {
 			UpdateLastError();
 			return Result(ERROR_CODE::SOCKET_LISTEN_FAILED, GetLastSystemErrorCode());
 		}
@@ -224,7 +224,7 @@ namespace WebSocket {
 		return Result();
 	}
 
-	AcceptResult Socket::Accept() {
+	AcceptResult Socket::accept() {
 		if (!Valid()) {
 			return { Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created"), nullptr };
 		}
@@ -234,7 +234,7 @@ namespace WebSocket {
 		socklen_t clientAddrLen = sizeof(clientAddr);
 		std::memset(&clientAddr, 0, sizeof(clientAddr));
 
-		SOCKET_TYPE_NATIVE clientSocket = accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
+		SOCKET_TYPE_NATIVE clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
 		if (clientSocket == INVALID_SOCKET_NATIVE) {
 			UpdateLastError();
 			const auto ret = Result(ERROR_CODE::SOCKET_ACCEPT_FAILED, GetLastSystemErrorCode());
@@ -245,7 +245,7 @@ namespace WebSocket {
 		return { Result(), std::move(newSocket) };
 	}
 
-	Result Socket::Connect(const std::string& address, uint16_t port) {
+	Result Socket::connect(const std::string& address, uint16_t port) {
 		if (!Valid()) {
 			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
 		}
@@ -259,7 +259,7 @@ namespace WebSocket {
 			return Result(ERROR_CODE::INVALID_PARAMETER, "Invalid IPv4 address: " + address);
 		}
 
-		if (connect(m_socket, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+		if (::connect(m_socket, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
 			UpdateLastError();
 			return Result(ERROR_CODE::SOCKET_CONNECT_FAILED, GetLastSystemErrorCode());
 		}
@@ -267,7 +267,7 @@ namespace WebSocket {
 		return Result();
 	}
 
-	Result Socket::Shutdown() {
+	Result Socket::shutdown() {
 		if (!Valid()) {
 			return Result();
 		}
@@ -286,13 +286,13 @@ namespace WebSocket {
 		return Result();
 	}
 
-	Result Socket::Close() {
+	Result Socket::close() {
 		if (!Valid()) {
 			return Result();
 		}
 
 		// Graceful shutdown first
-		Shutdown();
+		shutdown();
 
 #ifdef _WIN32
 		int result = closesocket(m_socket);
@@ -683,7 +683,7 @@ namespace WebSocket {
 		}
 
 		// Try to bind to the port
-		int result = bind(testSocket, (struct sockaddr*)addrPtr, addrLen);
+		int result = ::bind(testSocket, (struct sockaddr*)addrPtr, addrLen);
 		printf("DEBUG: IsPortAvailable - bind() result for port %d: %d\n", port, result);
 
 		// Close the test socket
@@ -1171,7 +1171,7 @@ namespace WebSocket {
 		socklen_t clientAddrLen = sizeof(clientAddr);
 #endif
 
-		SOCKET_TYPE_NATIVE clientSocket = accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
+		SOCKET_TYPE_NATIVE clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
 
 		if (clientSocket != INVALID_SOCKET_NATIVE) {
 			// Successfully accepted a connection

@@ -49,13 +49,13 @@ public:
     Socket& operator=(Socket&& other) noexcept;
 
     // Socket creation and configuration
-    Result Create(SOCKET_FAMILY family, SOCKET_TYPE type);
-    Result Bind(const std::string& address, uint16_t port);
-    Result Listen(int backlog = 128);
-    std::pair<Result, std::unique_ptr<Socket>> Accept();
-    Result Connect(const std::string& address, uint16_t port);
-    Result Shutdown();
-    Result Close();
+    Result create(SOCKET_FAMILY family, SOCKET_TYPE type);
+    Result bind(const std::string& address, uint16_t port);
+    Result listen(int backlog = 128);
+    std::pair<Result, std::unique_ptr<Socket>> accept();
+    Result connect(const std::string& address, uint16_t port);
+    Result shutdown();
+    Result close();
 
     // Data transmission - Raw methods
     SendResult SendRaw(const void* data, size_t length);

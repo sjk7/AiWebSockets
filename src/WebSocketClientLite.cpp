@@ -49,7 +49,7 @@ Result WebSocketClientLite::Connect() {
     
     // Create socket
     m_socket = std::make_unique<Socket>();
-    auto createResult = m_socket->Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
+    auto createResult = m_socket->create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
     if (!createResult.IsSuccess()) {
         m_socket.reset();
         if (m_onError) {
@@ -65,7 +65,7 @@ Result WebSocketClientLite::Connect() {
     }
     
     // Connect to server (non-blocking)
-    auto connectResult = m_socket->Connect(m_serverHost, m_serverPort);
+    auto connectResult = m_socket->connect(m_serverHost, m_serverPort);
     if (!connectResult.IsSuccess()) {
         // For non-blocking sockets, connect might return "in progress"
         int systemError = connectResult.GetSystemErrorCode();
@@ -130,7 +130,7 @@ Result WebSocketClientLite::Connect() {
     // Perform WebSocket handshake
     auto handshakeResult = PerformWebSocketHandshake();
     if (!handshakeResult.IsSuccess()) {
-        m_socket->Close();
+        m_socket->close();
         m_socket.reset();
         if (m_onError) {
             m_onError(handshakeResult);
@@ -160,7 +160,7 @@ Result WebSocketClientLite::Disconnect() {
         std::vector<uint8_t> closeFrame = {0x88, 0x00}; // Close frame
         m_socket->Send(closeFrame);
         
-        m_socket->Close();
+        m_socket->close();
         m_socket.reset();
     }
     

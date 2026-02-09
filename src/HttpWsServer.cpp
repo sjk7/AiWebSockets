@@ -67,7 +67,7 @@ Result HttpWsServer::Start() {
     
     // Create server socket
     m_serverSocket = std::make_unique<Socket>();
-    auto createResult = m_serverSocket->Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
+    auto createResult = m_serverSocket->create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
     if (!createResult.IsSuccess()) {
         if (m_onError) m_onError("Failed to create server socket: " + createResult.GetErrorMessage());
         return createResult;
@@ -77,14 +77,14 @@ Result HttpWsServer::Start() {
     m_serverSocket->ReuseAddress(true);
     
     // Bind to address
-    auto bindResult = m_serverSocket->Bind(m_bindAddress, m_port);
+    auto bindResult = m_serverSocket->bind(m_bindAddress, m_port);
     if (!bindResult.IsSuccess()) {
         if (m_onError) m_onError("Failed to bind server socket: " + bindResult.GetErrorMessage());
         return bindResult;
     }
     
     // Start listening
-    auto listenResult = m_serverSocket->Listen(128);
+    auto listenResult = m_serverSocket->listen(128);
     if (!listenResult.IsSuccess()) {
         if (m_onError) m_onError("Failed to listen on server socket: " + listenResult.GetErrorMessage());
         return listenResult;
@@ -109,7 +109,7 @@ Result HttpWsServer::Stop() {
     
     // Close server socket to unblock accept
     if (m_serverSocket) {
-        m_serverSocket->Close();
+        m_serverSocket->close();
     }
     
     // Wait for server thread to finish
@@ -122,7 +122,7 @@ Result HttpWsServer::Stop() {
         std::lock_guard<std::mutex> lock(m_clientsMutex);
         for (auto& client : m_clients) {
             if (client && client->socket) {
-                client->socket->Close();
+                client->socket->close();
             }
         }
         m_clients.clear();
@@ -155,7 +155,7 @@ void HttpWsServer::BlockIP(const std::string& ip) {
         std::lock_guard<std::mutex> clientsLock(m_clientsMutex);
         for (auto& client : m_clients) {
             if (client && client->clientIP == ip) {
-                client->socket->Close();
+                client->socket->close();
             }
         }
     }
@@ -175,7 +175,7 @@ std::vector<std::string> HttpWsServer::GetBlockedIPs() const {
 void HttpWsServer::ServerLoop() {
     while (!m_shouldStop) {
         // Accept new connection
-        auto [acceptResult, clientSocket] = m_serverSocket->Accept();
+        auto [acceptResult, clientSocket] = m_serverSocket->accept();
         if (!acceptResult.IsSuccess() || !clientSocket) {
             if (m_shouldStop) break;
             continue;
@@ -195,7 +195,7 @@ void HttpWsServer::ServerLoop() {
             if (m_onSecurityViolation) {
                 m_onSecurityViolation(clientIP, "Connection rejected: Security limits exceeded");
             }
-            clientSocket->Close();
+            clientSocket->close();
             continue;
         }
         
@@ -411,7 +411,7 @@ void HttpWsServer::SendHTTPResponseSync(ClientConnection* client, const std::str
     
     // For HTTP connections, close after sending response
     // Socket::Close() handles proper shutdown internally
-    client->socket->Close();
+    client->socket->close();
 }
 
 void HttpWsServer::SendHTTPResponse(ClientConnection* client, const std::string& status, 
@@ -472,7 +472,7 @@ void HttpWsServer::SendHTTPResponse(ClientConnection* client, const std::string&
     
     // For HTTP connections, close after sending response
     // Socket::Close() handles proper shutdown internally
-    client->socket->Close();
+    client->socket->close();
 }
 
 bool HttpWsServer::IsIPBlocked(const std::string& ip) const {
