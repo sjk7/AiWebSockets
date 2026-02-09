@@ -163,6 +163,7 @@ set(WEBSOCKET_HEADERS
     include/WebSocket/ErrorCodes.h
     include/WebSocket/TestUtilities.h
     include/WebSocket/Types.h
+    include/WebSocket/AddrInfoGuard.h
 )
 
 # Create library

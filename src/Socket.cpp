@@ -1,5 +1,6 @@
 #include "WebSocket/Socket.h"
-#include <vector>
+#include "WebSocket/AddrInfoGuard.h"
+#include "WebSocket/ErrorCodes.h"
 #include <string>
 #include <cstring>
 #include <thread>
@@ -711,7 +712,7 @@ namespace WebSocket {
 			return ipAddresses; // Return empty list on error
 		}
 		
-		// Get host information using getaddrinfo (modern replacement for gethostbyname)
+		// Get host information using getaddrinfo with RAII protection
 		char hostname[256] = {0};
 		if (gethostname(hostname, sizeof(hostname)) != 0) {
 			WSACleanup();
@@ -723,17 +724,17 @@ namespace WebSocket {
 		hints.ai_family = AF_UNSPEC; // Both IPv4 and IPv6
 		hints.ai_socktype = SOCK_STREAM;
 		
-		struct addrinfo* result = nullptr;
-		int ret = getaddrinfo(hostname, nullptr, &hints, &result);
-		if (ret != 0 || result == nullptr) {
+		// Use RAII wrapper for automatic cleanup
+		AddrInfoGuard addrInfo = GetAddrInfo(hostname, nullptr, &hints);
+		if (!addrInfo) {
 			WSACleanup();
-			return ipAddresses;
+			return ipAddresses; // Return empty list on error
 		}
 		
-		// Extract all IP addresses
-		for (struct addrinfo* p = result; p != nullptr; p = p->ai_next) {
-			if (p->ai_family == AF_INET) {
-				struct sockaddr_in* sockaddr = (struct sockaddr_in*)p->ai_addr;
+		// Extract all IP addresses using range-based for loop
+		for (const auto& addr : addrInfo) {
+			if (addr.ai_family == AF_INET) {
+				struct sockaddr_in* sockaddr = (struct sockaddr_in*)addr.ai_addr;
 				char buffer[INET_ADDRSTRLEN];
 				if (inet_ntop(AF_INET, &(sockaddr->sin_addr), buffer, INET_ADDRSTRLEN) != nullptr) {
 					std::string ip = buffer;
@@ -744,8 +745,8 @@ namespace WebSocket {
 					}
 				}
 			}
-			else if (p->ai_family == AF_INET6) {
-				struct sockaddr_in6* sockaddr = (struct sockaddr_in6*)p->ai_addr;
+			else if (addr.ai_family == AF_INET6) {
+				struct sockaddr_in6* sockaddr = (struct sockaddr_in6*)addr.ai_addr;
 				char buffer[INET6_ADDRSTRLEN];
 				if (inet_ntop(AF_INET6, &(sockaddr->sin6_addr), buffer, INET6_ADDRSTRLEN) != nullptr) {
 					std::string ip = buffer;
@@ -758,7 +759,7 @@ namespace WebSocket {
 			}
 		}
 		
-		freeaddrinfo(result);
+		// No need for manual freeaddrinfo - RAII handles it automatically
 		WSACleanup();
 		
 #else
