@@ -1,7 +1,6 @@
 #include "WebSocket/HttpWsServer.h"
 #include <sstream>
 #include <algorithm>
-#include <iostream>
 
 namespace WebSocket {
 

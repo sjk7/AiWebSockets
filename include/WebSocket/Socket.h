@@ -84,7 +84,7 @@ public:
 
     // Getters
     bool isValid() const;
-    bool blocking() const;
+    bool isBlocking() const;
     std::string localAddress() const;
     uint16_t localPort() const;
     std::string remoteAddress() const;

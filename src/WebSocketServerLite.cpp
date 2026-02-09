@@ -273,7 +273,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
         }
         
         // Validate HTTP request
-        if (m_securityEnabled && !validateHTTPRequest(accumulatedRequest)) {
+        if (m_securityEnabled && !isHTTPRequestValid(accumulatedRequest)) {
             std::cout << "🚫 Invalid HTTP request from " << clientIP << std::endl;
             sendHTTPResponse(*clientSocket, "400 Bad Request", "text/plain", "Bad Request");
             removeConnection(clientIP);
@@ -340,7 +340,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
     removeConnection(clientIP);
 }
 
-bool WebSocketServerLite::validateHTTPRequest(const std::string& request) {
+bool WebSocketServerLite::isHTTPRequestValid(const std::string& request) {
     // Check request size
     const size_t MAX_REQUEST_SIZE = 65536;
     if (request.length() > MAX_REQUEST_SIZE) {

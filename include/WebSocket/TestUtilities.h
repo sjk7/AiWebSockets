@@ -36,7 +36,7 @@ inline std::vector<uint8_t> createTestData(size_t dataSize) {
  * @param expectedSize The expected size of the data
  * @return true if data matches expected pattern, false otherwise
  */
-inline bool verifyDataIntegrity(const std::vector<uint8_t>& receivedData, size_t expectedSize) {
+inline bool isDataIntegrityValid(const std::vector<uint8_t>& receivedData, size_t expectedSize) {
     if (receivedData.size() != expectedSize) {
         return false;
     }

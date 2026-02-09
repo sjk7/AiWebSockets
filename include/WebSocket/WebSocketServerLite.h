@@ -81,7 +81,7 @@ private:
     // Internal methods
     Result initializeServer();
     void handleClientConnection(std::unique_ptr<Socket> clientSocket);
-    bool validateHTTPRequest(const std::string& request);
+    bool isHTTPRequestValid(const std::string& request);
     Result performWebSocketHandshake(Socket& clientSocket, const std::string& request);
     void sendHTTPResponse(Socket& clientSocket, const std::string& status, const std::string& contentType, const std::string& body);
     std::string getClientIP(const Socket& socket, const std::string& httpRequest = "");

@@ -505,7 +505,7 @@ namespace WebSocket {
 		return m_socket != INVALID_SOCKET_NATIVE;
 	}
 
-	bool Socket::blocking() const {
+	bool Socket::isBlocking() const {
 		return m_isBlocking;
 	}
 
