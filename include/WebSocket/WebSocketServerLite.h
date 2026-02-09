@@ -8,7 +8,7 @@
 #include <mutex>
 #include <atomic>
 
-namespace WebSocket {
+namespace nob {
 
 // Connection tracking for security
 struct ConnectionInfo {
@@ -94,4 +94,4 @@ private:
     void removeConnection(const std::string& clientIP);
 };
 
-} // namespace WebSocket
+} // namespace nob

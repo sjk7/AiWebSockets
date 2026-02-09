@@ -87,15 +87,15 @@ void testErrorCodes() {
     printf("\n--- Error Codes Tests ---\n");
     
     // Test error code string conversion
-    testFramework::assertEquals("Success", WebSocket::getErrorCodeString(WebSocket::ErrorCode::success), "SUCCESS error code string");
-    testFramework::assertEquals("Unknown error", WebSocket::getErrorCodeString(WebSocket::ErrorCode::unknownError), "UNKNOWN_ERROR error code string");
+    testFramework::assertEquals("Success", nob::getErrorCodeString(nob::ErrorCode::success), "SUCCESS error code string");
+    testFramework::assertEquals("Unknown error", nob::getErrorCodeString(nob::ErrorCode::unknownError), "UNKNOWN_ERROR error code string");
     
     // Test result struct
-    WebSocket::Result successResult(WebSocket::ErrorCode::success);
+    nob::Result successResult(nob::ErrorCode::success);
     testFramework::assert(successResult.isSuccess(), "Success result is success");
     testFramework::assert(!successResult.isError(), "Success result is not error");
     
-    WebSocket::Result errorResult(WebSocket::ErrorCode::socketCreateFailed, "Test error");
+    nob::Result errorResult(nob::ErrorCode::socketCreateFailed, "Test error");
     testFramework::assert(!errorResult.isSuccess(), "Error result is not success");
     testFramework::assert(errorResult.isError(), "Error result is error");
     testFramework::assertEquals("Test error", errorResult.getErrorMessage(), "Error message is preserved");
@@ -107,20 +107,20 @@ void testSocketCreation() {
     // Note: Socket system is now automatically initialized when first socket is created
     
     // Test socket creation
-    WebSocket::Socket socket;
+    nob::Socket socket;
     testFramework::assert(!socket.isValid(), "Socket is initially invalid");
     
-    WebSocket::Result createResult = socket.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP);
+    nob::Result createResult = socket.create(nob::socketFamily::IPV4, nob::socketType::TCP);
     testFramework::assert(createResult.isSuccess(), "IPv4 TCP socket creation");
     testFramework::assert(socket.isValid(), "Socket is valid after creation");
     
     // Test socket move constructor
-    WebSocket::Socket movedSocket = std::move(socket);
+    nob::Socket movedSocket = std::move(socket);
     testFramework::assert(!socket.isValid(), "Original socket is invalid after move");
     testFramework::assert(movedSocket.isValid(), "Moved socket is valid");
     
     // Test socket cleanup
-    WebSocket::Result closeResult = movedSocket.close();
+    nob::Result closeResult = movedSocket.close();
     testFramework::assert(closeResult.isSuccess(), "Socket close");
     testFramework::assert(!movedSocket.isValid(), "Socket is invalid after close");
     
@@ -133,26 +133,26 @@ void testSocketOperations() {
     // Note: Socket system is now automatically initialized when first socket is created
     
     // create server socket
-    WebSocket::Socket serverSocket;
-    WebSocket::Result createResult = serverSocket.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP);
+    nob::Socket serverSocket;
+    nob::Result createResult = serverSocket.create(nob::socketFamily::IPV4, nob::socketType::TCP);
     testFramework::assert(createResult.isSuccess(), "Server socket creation");
     
     // Test socket binding
-    WebSocket::Result bindResult = serverSocket.bind("127.0.0.1", 0); // Use port 0 for automatic assignment
+    nob::Result bindResult = serverSocket.bind("127.0.0.1", 0); // Use port 0 for automatic assignment
     testFramework::assert(bindResult.isSuccess(), "Socket binding to localhost");
     
     // Test socket listening
-    WebSocket::Result listenResult = serverSocket.listen(5);
+    nob::Result listenResult = serverSocket.listen(5);
     testFramework::assert(listenResult.isSuccess(), "Socket listening");
     
     // Test socket options
-    WebSocket::Result blockingResult = serverSocket.blocking(false);
+    nob::Result blockingResult = serverSocket.blocking(false);
     testFramework::assert(blockingResult.isSuccess(), "Set non-blocking mode");
     
-    WebSocket::Result reuseResult = serverSocket.reuseAddress(true);
+    nob::Result reuseResult = serverSocket.reuseAddress(true);
     testFramework::assert(reuseResult.isSuccess(), "Set reuse address");
     
-    WebSocket::Result keepAliveResult = serverSocket.keepAlive(true);
+    nob::Result keepAliveResult = serverSocket.keepAlive(true);
     testFramework::assert(keepAliveResult.isSuccess(), "Set keep alive");
     
     // Get socket address for client connection
@@ -163,17 +163,17 @@ void testSocketOperations() {
     testFramework::assert(localPort > 0, "Port should be greater than 0");
     
     // create client socket
-    WebSocket::Socket clientSocket;
-    WebSocket::Result clientcreateResult = clientSocket.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP);
+    nob::Socket clientSocket;
+    nob::Result clientcreateResult = clientSocket.create(nob::socketFamily::IPV4, nob::socketType::TCP);
     testFramework::assert(clientcreateResult.isSuccess(), "Client socket creation");
     
     // Test client connection
-    WebSocket::Result connectResult = clientSocket.connect("127.0.0.1", localPort);
+    nob::Result connectResult = clientSocket.connect("127.0.0.1", localPort);
     testFramework::assert(connectResult.isSuccess(), "Client connection to server");
     
     // Test data transmission
     std::string testData = "Hello WebSocket!";
-    WebSocket::Result sendResult = clientSocket.send(std::vector<uint8_t>(testData.begin(), testData.end()));
+    nob::Result sendResult = clientSocket.send(std::vector<uint8_t>(testData.begin(), testData.end()));
     testFramework::assert(sendResult.isSuccess(), "Client send data");
     
     // accept connection
@@ -190,13 +190,13 @@ void testSocketOperations() {
     testFramework::assertEquals(testData, receivedString, "received data should match sent data");
     
     // Cleanup
-    WebSocket::Result clientcloseResult = clientSocket.close();
+    nob::Result clientcloseResult = clientSocket.close();
     testFramework::assert(clientcloseResult.isSuccess(), "Client socket close");
     
-    WebSocket::Result acceptedcloseResult = acceptedSocket->close();
+    nob::Result acceptedcloseResult = acceptedSocket->close();
     testFramework::assert(acceptedcloseResult.isSuccess(), "accepted socket close");
     
-    WebSocket::Result servercloseResult = serverSocket.close();
+    nob::Result servercloseResult = serverSocket.close();
     testFramework::assert(servercloseResult.isSuccess(), "Server socket close");
     
 
@@ -215,11 +215,11 @@ void testReuseAddressFunctionality() {
         printf("Test 1: Rapid server restart with REUSEADDR\n");
         
         // First server
-        WebSocket::Socket server1;
-        testFramework::assert(server1.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP).isSuccess(), 
+        nob::Socket server1;
+        testFramework::assert(server1.create(nob::socketFamily::IPV4, nob::socketType::TCP).isSuccess(), 
                               "First server socket creation");
         
-        WebSocket::Result reuseResult1 = server1.reuseAddress(true);
+        nob::Result reuseResult1 = server1.reuseAddress(true);
         testFramework::assert(reuseResult1.isSuccess(), "First server SetreuseAddress(true)");
         
         testFramework::assert(server1.bind(testAddress, testPort).isSuccess(), "First server bind");
@@ -236,11 +236,11 @@ void testReuseAddressFunctionality() {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         
         // Second server on same port (should succeed with REUSEADDR)
-        WebSocket::Socket server2;
-        testFramework::assert(server2.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP).isSuccess(), 
+        nob::Socket server2;
+        testFramework::assert(server2.create(nob::socketFamily::IPV4, nob::socketType::TCP).isSuccess(), 
                               "Second server socket creation");
         
-        WebSocket::Result reuseResult2 = server2.reuseAddress(true);
+        nob::Result reuseResult2 = server2.reuseAddress(true);
         testFramework::assert(reuseResult2.isSuccess(), "Second server SetreuseAddress(true)");
         
         testFramework::assert(server2.bind(testAddress, serverPort).isSuccess(), 
@@ -256,11 +256,11 @@ void testReuseAddressFunctionality() {
     {
         printf("Test 2: SetreuseAddress(false) functionality\n");
         
-        WebSocket::Socket server;
-        testFramework::assert(server.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP).isSuccess(), 
+        nob::Socket server;
+        testFramework::assert(server.create(nob::socketFamily::IPV4, nob::socketType::TCP).isSuccess(), 
                               "Server socket creation");
         
-        WebSocket::Result reuseResult = server.reuseAddress(false);
+        nob::Result reuseResult = server.reuseAddress(false);
         testFramework::assert(reuseResult.isSuccess(), "SetreuseAddress(false) should succeed");
         
         testFramework::assert(server.close().isSuccess(), "Server close");
@@ -271,8 +271,8 @@ void testReuseAddressFunctionality() {
         printf("Test 3: Multiple servers with REUSEADDR on port 0\n");
         
         for (int i = 0; i < 3; ++i) {
-            WebSocket::Socket server;
-            testFramework::assert(server.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP).isSuccess(), 
+            nob::Socket server;
+            testFramework::assert(server.create(nob::socketFamily::IPV4, nob::socketType::TCP).isSuccess(), 
                                   "Server socket creation");
             
             testFramework::assert(server.reuseAddress(true).isSuccess(), "SetreuseAddress(true)");
@@ -295,41 +295,41 @@ void testWebSocketProtocol() {
     printf("\n--- WebSocket Protocol Tests ---\n");
     
     // Test frame creation
-    WebSocket::WebSocketFrame textFrame = WebSocket::WebSocketProtocol::createTextFrame("Hello World");
+    nob::WebSocketFrame textFrame = nob::WebSocketProtocol::createTextFrame("Hello World");
     testFramework::assert(textFrame.Fin, "Text frame has FIN flag set");
     testFramework::assert(!textFrame.Rsv1 && !textFrame.Rsv2 && !textFrame.Rsv3, "Text frame has no RSV bits set");
-    testFramework::assert(textFrame.Opcode == WebSocket::websocketOpcode::TEXT, "Text frame has correct opcode");
+    testFramework::assert(textFrame.Opcode == nob::websocketOpcode::TEXT, "Text frame has correct opcode");
     testFramework::assert(!textFrame.Masked, "Text frame is not masked (server-to-client)");
     testFramework::assert(textFrame.PayloadLength == 11, "Text frame has correct payload length");
     
     // Test binary frame
     std::vector<uint8_t> binaryData = {0x01, 0x02, 0x03, 0x04};
-    WebSocket::WebSocketFrame binaryFrame = WebSocket::WebSocketProtocol::createBinaryFrame(binaryData);
-    testFramework::assert(binaryFrame.Opcode == WebSocket::websocketOpcode::BINARY, "Binary frame has correct opcode");
+    nob::WebSocketFrame binaryFrame = nob::WebSocketProtocol::createBinaryFrame(binaryData);
+    testFramework::assert(binaryFrame.Opcode == nob::websocketOpcode::BINARY, "Binary frame has correct opcode");
     testFramework::assert(binaryFrame.PayloadLength == 4, "Binary frame has correct payload length");
     
     // Test ping frame
-    WebSocket::WebSocketFrame pingFrame = WebSocket::WebSocketProtocol::createPingFrame();
-    testFramework::assert(pingFrame.Opcode == WebSocket::websocketOpcode::PING, "Ping frame has correct opcode");
+    nob::WebSocketFrame pingFrame = nob::WebSocketProtocol::createPingFrame();
+    testFramework::assert(pingFrame.Opcode == nob::websocketOpcode::PING, "Ping frame has correct opcode");
     
     // Test pong frame
-    WebSocket::WebSocketFrame pongFrame = WebSocket::WebSocketProtocol::createPongFrame();
-    testFramework::assert(pongFrame.Opcode == WebSocket::websocketOpcode::PONG, "Pong frame has correct opcode");
+    nob::WebSocketFrame pongFrame = nob::WebSocketProtocol::createPongFrame();
+    testFramework::assert(pongFrame.Opcode == nob::websocketOpcode::PONG, "Pong frame has correct opcode");
     
     // Test close frame
-    WebSocket::WebSocketFrame closeFrame = WebSocket::WebSocketProtocol::createCloseFrame(1000, "Normal closure");
-    testFramework::assert(closeFrame.Opcode == WebSocket::websocketOpcode::CLOSE, "close frame has correct opcode");
+    nob::WebSocketFrame closeFrame = nob::WebSocketProtocol::createCloseFrame(1000, "Normal closure");
+    testFramework::assert(closeFrame.Opcode == nob::websocketOpcode::CLOSE, "close frame has correct opcode");
     testFramework::assert(closeFrame.PayloadLength >= 2, "close frame has at least status code");
     
     // Test frame generation
-    std::vector<uint8_t> frameData = WebSocket::WebSocketProtocol::generateFrame(textFrame);
+    std::vector<uint8_t> frameData = nob::WebSocketProtocol::generateFrame(textFrame);
     testFramework::assert(!frameData.empty(), "Frame generation produces data");
     testFramework::assert(frameData.size() >= 2, "Frame has minimum header size");
     
     // Test frame parsing
-    WebSocket::WebSocketFrame parsedFrame;
+    nob::WebSocketFrame parsedFrame;
     size_t bytesConsumed = 0;
-    WebSocket::Result parseResult = WebSocket::WebSocketProtocol::parseFrame(frameData, parsedFrame, bytesConsumed);
+    nob::Result parseResult = nob::WebSocketProtocol::parseFrame(frameData, parsedFrame, bytesConsumed);
     testFramework::assert(parseResult.isSuccess(), "Frame parsing succeeds");
     testFramework::assert(bytesConsumed > 0, "Frame parsing consumes bytes");
     testFramework::assert(parsedFrame.Opcode == textFrame.Opcode, "Parsed frame has correct opcode");

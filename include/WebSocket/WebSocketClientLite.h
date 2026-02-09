@@ -5,7 +5,7 @@
 #include <functional>
 #include <string>
 
-namespace WebSocket {
+namespace nob {
 
 // Type aliases for cleaner code
 using MessageReceiveResult = std::pair<Result, std::string>;
@@ -63,4 +63,4 @@ private:
     Result sendWebSocketFrame(const std::vector<uint8_t>& data, int opcode);
 };
 
-} // namespace WebSocket
+} // namespace nob

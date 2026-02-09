@@ -8,7 +8,7 @@
 #include <string.h>
 #endif
 
-namespace WebSocket {
+namespace nob {
 
 const char* getErrorCodeString(ErrorCode code) {
     switch (code) {
@@ -120,4 +120,4 @@ std::string Result::generateErrorMessage() const {
     return result;
 }
 
-} // namespace WebSocket
+} // namespace nob

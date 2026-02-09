@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace WebSocket {
+namespace nob {
 
 // Core error codes for the WebSocket library
 enum class ErrorCode {
@@ -120,4 +120,4 @@ struct HandshakeInfo {
     std::vector<std::pair<std::string, std::string>> Headers;
 };
 
-} // namespace WebSocket
+} // namespace nob

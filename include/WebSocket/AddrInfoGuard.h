@@ -9,7 +9,7 @@
 #include <netdb.h>
 #endif
 
-namespace WebSocket {
+namespace nob {
 
 /**
  * @brief RAII wrapper for addrinfo structures
@@ -207,4 +207,4 @@ inline AddrInfoGuard GetAddrInfo(const char* node, const char* service, const st
     return AddrInfoGuard(result, true);
 }
 
-} // namespace WebSocket
+} // namespace nob

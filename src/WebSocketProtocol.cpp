@@ -14,7 +14,7 @@
 #include <openssl/rand.h>
 #endif
 
-namespace WebSocket {
+namespace nob {
 
 // Base64 encoding table
 static const char BASE64_CHARS[] = 
@@ -503,4 +503,4 @@ bool WebSocketProtocol::isValidUTF8(const std::vector<uint8_t>& data) {
     return true;
 }
 
-} // namespace WebSocket
+} // namespace nob

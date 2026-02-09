@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <sstream>
 
-namespace WebSocket {
+namespace nob {
 
 WebSocketServerLite::WebSocketServerLite(uint16_t port, const std::string& bindAddress)
     : m_bindAddress(bindAddress), m_port(port), m_running(false), m_securityEnabled(true),
@@ -522,4 +522,4 @@ auto it = ipConnectionMap.find(clientIP);
     }
 }
 
-} // namespace WebSocket
+} // namespace nob

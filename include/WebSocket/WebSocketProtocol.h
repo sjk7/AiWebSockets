@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-namespace WebSocket {
+namespace nob {
 
 /**
  * @brief WebSocket Protocol Implementation
@@ -46,4 +46,4 @@ private:
     static std::string sha1Hash(const std::string& input);
 };
 
-} // namespace WebSocket
+} // namespace nob

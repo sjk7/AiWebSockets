@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-namespace WebSocket {
+namespace nob {
 
 // Forward declarations to hide native socket types
 class SocketImpl;
@@ -103,4 +103,4 @@ private:
     std::unique_ptr<SocketImpl> m_impl;
 };
 
-} // namespace WebSocket
+} // namespace nob

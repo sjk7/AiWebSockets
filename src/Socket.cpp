@@ -23,7 +23,7 @@
 #include <sys/time.h>
 #endif
 
-namespace WebSocket {
+namespace nob {
 
 	// Static member definitions
 	std::atomic<int> Socket::s_socketCount{ 0 };
@@ -1237,4 +1237,4 @@ namespace WebSocket {
 		return socket;
 	}
 
-} // namespace WebSocket
+} // namespace nob

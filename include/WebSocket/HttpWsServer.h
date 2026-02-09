@@ -12,7 +12,7 @@
 #include <atomic>
 #include <map>
 
-namespace WebSocket {
+namespace nob {
 
 // Forward declarations
 struct HTTPRequest;
@@ -197,4 +197,4 @@ private:
     std::string generateHTTPResponse(const std::string& status, const std::string& contentType, const std::string& body);
 };
 
-} // namespace WebSocket
+} // namespace nob

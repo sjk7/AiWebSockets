@@ -68,14 +68,14 @@ int main() {
     {
         totalTests++;
         std::cout << "\n--- Test 1: Empty Text Frame ---" << std::endl;
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame("");
+        auto frame = nob::WebSocketProtocol::createTextFrame("");
         
         bool result = assertEqual(0, frame.PayloadLength, "Empty text frame payload length") &&
                       assertTrue(frame.Fin, "Empty text frame FIN flag") &&
                       assertFalse(frame.Rsv1, "Empty text frame RSV1 flag") &&
                       assertFalse(frame.Rsv2, "Empty text frame RSV2 flag") &&
                       assertFalse(frame.Rsv3, "Empty text frame RSV3 flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Empty text frame opcode") &&
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Empty text frame opcode") &&
                       assertFalse(frame.Masked, "Empty text frame masked flag");
         
         if (result) passedTests++;
@@ -86,11 +86,11 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 2: Small Text Frame ---" << std::endl;
         std::string testString = "Hello";
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
         
         bool result = assertEqual(testString.length(), frame.PayloadLength, "Small text frame payload length") &&
                       assertTrue(frame.Fin, "Small text frame FIN flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Small text frame opcode") &&
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Small text frame opcode") &&
                       assertFalse(frame.Masked, "Small text frame masked flag");
         
         if (result) passedTests++;
@@ -101,11 +101,11 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 3: Medium Text Frame (125 bytes) ---" << std::endl;
         std::string testString(125, 'A');
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
         
         bool result = assertEqual(125, frame.PayloadLength, "Medium text frame payload length") &&
                       assertTrue(frame.Fin, "Medium text frame FIN flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Medium text frame opcode");
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Medium text frame opcode");
         
         if (result) passedTests++;
     }
@@ -115,11 +115,11 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 4: Large Text Frame (126 bytes) ---" << std::endl;
         std::string testString(126, 'B');
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
         
         bool result = assertEqual(126, frame.PayloadLength, "Large text frame payload length") &&
                       assertTrue(frame.Fin, "Large text frame FIN flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Large text frame opcode");
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Large text frame opcode");
         
         if (result) passedTests++;
     }
@@ -129,11 +129,11 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 5: Very Large Text Frame (65536 bytes) ---" << std::endl;
         std::string testString(65536, 'C');
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
         
         bool result = assertEqual(65536, frame.PayloadLength, "Very large text frame payload length") &&
                       assertTrue(frame.Fin, "Very large text frame FIN flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Very large text frame opcode");
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::TEXT), static_cast<size_t>(frame.Opcode), "Very large text frame opcode");
         
         if (result) passedTests++;
     }
@@ -143,11 +143,11 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 6: Binary Frame ---" << std::endl;
         std::vector<uint8_t> binaryData = {0x01, 0x02, 0x03, 0x04, 0x05};
-        auto frame = WebSocket::WebSocketProtocol::createBinaryFrame(binaryData);
+        auto frame = nob::WebSocketProtocol::createBinaryFrame(binaryData);
         
         bool result = assertEqual(binaryData.size(), frame.PayloadLength, "Binary frame payload length") &&
                       assertTrue(frame.Fin, "Binary frame FIN flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::BINARY), static_cast<size_t>(frame.Opcode), "Binary frame opcode") &&
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::BINARY), static_cast<size_t>(frame.Opcode), "Binary frame opcode") &&
                       assertFalse(frame.Masked, "Binary frame masked flag");
         
         if (result) passedTests++;
@@ -157,11 +157,11 @@ int main() {
     {
         totalTests++;
         std::cout << "\n--- Test 7: Ping Frame ---" << std::endl;
-        auto frame = WebSocket::WebSocketProtocol::createPingFrame();
+        auto frame = nob::WebSocketProtocol::createPingFrame();
         
         bool result = assertEqual(0, frame.PayloadLength, "Ping frame payload length") &&
                       assertTrue(frame.Fin, "Ping frame FIN flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::PING), static_cast<size_t>(frame.Opcode), "Ping frame opcode") &&
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::PING), static_cast<size_t>(frame.Opcode), "Ping frame opcode") &&
                       assertFalse(frame.Masked, "Ping frame masked flag");
         
         if (result) passedTests++;
@@ -171,11 +171,11 @@ int main() {
     {
         totalTests++;
         std::cout << "\n--- Test 8: Pong Frame ---" << std::endl;
-        auto frame = WebSocket::WebSocketProtocol::createPongFrame();
+        auto frame = nob::WebSocketProtocol::createPongFrame();
         
         bool result = assertEqual(0, frame.PayloadLength, "Pong frame payload length") &&
                       assertTrue(frame.Fin, "Pong frame FIN flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::PONG), static_cast<size_t>(frame.Opcode), "Pong frame opcode") &&
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::PONG), static_cast<size_t>(frame.Opcode), "Pong frame opcode") &&
                       assertFalse(frame.Masked, "Pong frame masked flag");
         
         if (result) passedTests++;
@@ -185,11 +185,11 @@ int main() {
     {
         totalTests++;
         std::cout << "\n--- Test 9: Close Frame (Default) ---" << std::endl;
-        auto frame = WebSocket::WebSocketProtocol::createCloseFrame();
+        auto frame = nob::WebSocketProtocol::createCloseFrame();
         
         bool result = assertEqual(2, frame.PayloadLength, "Close frame payload length (default)") &&
                       assertTrue(frame.Fin, "Close frame FIN flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::CLOSE), static_cast<size_t>(frame.Opcode), "Close frame opcode") &&
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::CLOSE), static_cast<size_t>(frame.Opcode), "Close frame opcode") &&
                       assertFalse(frame.Masked, "Close frame masked flag");
         
         if (result) passedTests++;
@@ -200,11 +200,11 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 10: Close Frame (Custom) ---" << std::endl;
         std::string reason = "Normal closure";
-        auto frame = WebSocket::WebSocketProtocol::createCloseFrame(1000, reason);
+        auto frame = nob::WebSocketProtocol::createCloseFrame(1000, reason);
         
         bool result = assertEqual(2 + reason.length(), frame.PayloadLength, "Close frame payload length (custom)") &&
                       assertTrue(frame.Fin, "Close frame FIN flag") &&
-                      assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::CLOSE), static_cast<size_t>(frame.Opcode), "Close frame opcode") &&
+                      assertEqual(static_cast<size_t>(nob::websocketOpcode::CLOSE), static_cast<size_t>(frame.Opcode), "Close frame opcode") &&
                       assertFalse(frame.Masked, "Close frame masked flag");
         
         if (result) passedTests++;
@@ -215,8 +215,8 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 11: Frame Generation (Small) ---" << std::endl;
         std::string testString = "Test";
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
-        auto frameData = WebSocket::WebSocketProtocol::generateFrame(frame);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
+        auto frameData = nob::WebSocketProtocol::generateFrame(frame);
         
         bool result = assertTrue(!frameData.empty(), "Frame generation produces data") &&
                       assertEqual(testString.length() + 2, frameData.size(), "Small frame data size"); // 2 bytes header + payload
@@ -232,8 +232,8 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 12: Frame Generation (Medium) ---" << std::endl;
         std::string testString(125, 'M');
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
-        auto frameData = WebSocket::WebSocketProtocol::generateFrame(frame);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
+        auto frameData = nob::WebSocketProtocol::generateFrame(frame);
         
         bool result = assertTrue(!frameData.empty(), "Medium frame generation produces data") &&
                       assertEqual(125 + 2, frameData.size(), "Medium frame data size"); // 2 bytes header + payload
@@ -249,8 +249,8 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 13: Frame Generation (Large) ---" << std::endl;
         std::string testString(126, 'L');
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
-        auto frameData = WebSocket::WebSocketProtocol::generateFrame(frame);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
+        auto frameData = nob::WebSocketProtocol::generateFrame(frame);
         
         bool result = assertTrue(!frameData.empty(), "Large frame generation produces data") &&
                       assertEqual(126 + 4, frameData.size(), "Large frame data size"); // 4 bytes header + payload (2 extra for 16-bit length)
@@ -266,8 +266,8 @@ int main() {
         totalTests++;
         std::cout << "\n--- Test 14: Frame Generation (Very Large) ---" << std::endl;
         std::string testString(65536, 'V');
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
-        auto frameData = WebSocket::WebSocketProtocol::generateFrame(frame);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
+        auto frameData = nob::WebSocketProtocol::generateFrame(frame);
         
         bool result = assertTrue(!frameData.empty(), "Very large frame generation produces data") &&
                       assertEqual(65536 + 10, frameData.size(), "Very large frame data size"); // 10 bytes header + payload (8 extra for 64-bit length)
@@ -285,15 +285,15 @@ int main() {
         std::string originalMessage = "Round trip test message with special chars: !@#$%^&*()";
         
         // Create frame
-        auto originalFrame = WebSocket::WebSocketProtocol::createTextFrame(originalMessage);
+        auto originalFrame = nob::WebSocketProtocol::createTextFrame(originalMessage);
         
         // Generate frame data
-        auto frameData = WebSocket::WebSocketProtocol::generateFrame(originalFrame);
+        auto frameData = nob::WebSocketProtocol::generateFrame(originalFrame);
         
         // Parse frame back
-        WebSocket::WebSocketFrame parsedFrame;
+        nob::WebSocketFrame parsedFrame;
         size_t bytesConsumed = 0;
-        auto parseResult = WebSocket::WebSocketProtocol::parseFrame(frameData, parsedFrame, bytesConsumed);
+        auto parseResult = nob::WebSocketProtocol::parseFrame(frameData, parsedFrame, bytesConsumed);
         
         bool result = assertTrue(parseResult.isSuccess(), "Frame parsing succeeds") &&
                       assertEqual(originalFrame.PayloadLength, parsedFrame.PayloadLength, "Round trip payload length") &&
@@ -317,14 +317,14 @@ int main() {
         std::cout << "\n--- Test 16: Invalid Opcode Detection ---" << std::endl;
         
         // Test valid opcodes
-        bool validText = WebSocket::WebSocketProtocol::isValidOpcode(WebSocket::websocketOpcode::TEXT);
-        bool validBinary = WebSocket::WebSocketProtocol::isValidOpcode(WebSocket::websocketOpcode::BINARY);
-        bool validClose = WebSocket::WebSocketProtocol::isValidOpcode(WebSocket::websocketOpcode::CLOSE);
-        bool validPing = WebSocket::WebSocketProtocol::isValidOpcode(WebSocket::websocketOpcode::PING);
-        bool validPong = WebSocket::WebSocketProtocol::isValidOpcode(WebSocket::websocketOpcode::PONG);
+        bool validText = nob::WebSocketProtocol::isValidOpcode(nob::websocketOpcode::TEXT);
+        bool validBinary = nob::WebSocketProtocol::isValidOpcode(nob::websocketOpcode::BINARY);
+        bool validClose = nob::WebSocketProtocol::isValidOpcode(nob::websocketOpcode::CLOSE);
+        bool validPing = nob::WebSocketProtocol::isValidOpcode(nob::websocketOpcode::PING);
+        bool validPong = nob::WebSocketProtocol::isValidOpcode(nob::websocketOpcode::PONG);
         
         // Test invalid opcode (assuming 0x7 is invalid)
-        bool invalidOpcode = WebSocket::WebSocketProtocol::isValidOpcode(static_cast<WebSocket::websocketOpcode>(0x7));
+        bool invalidOpcode = nob::WebSocketProtocol::isValidOpcode(static_cast<nob::websocketOpcode>(0x7));
         
         bool result = assertTrue(validText, "TEXT opcode is valid") &&
                       assertTrue(validBinary, "BINARY opcode is valid") &&
@@ -347,11 +347,11 @@ int main() {
         
         // Valid UTF-8
         std::vector<uint8_t> validUTF8 = {'H', 'e', 'l', 'l', 'o', 0xE2, 0x98, 0x83}; // "Hello☃"
-        bool validResult = WebSocket::WebSocketProtocol::isValidUTF8(validUTF8);
+        bool validResult = nob::WebSocketProtocol::isValidUTF8(validUTF8);
         
         // Invalid UTF-8 (truncated sequence)
         std::vector<uint8_t> invalidUTF8 = {'H', 'e', 'l', 'l', 'o', 0xE2}; // Truncated
-        bool invalidResult = WebSocket::WebSocketProtocol::isValidUTF8(invalidUTF8);
+        bool invalidResult = nob::WebSocketProtocol::isValidUTF8(invalidUTF8);
         
         bool result = assertTrue(validResult, "Valid UTF-8 should pass") &&
                       assertFalse(invalidResult, "Invalid UTF-8 should fail");
@@ -369,8 +369,8 @@ int main() {
         std::cout << "\n--- Test 18: Frame Header Validation ---" << std::endl;
         
         std::string testMessage = "Header validation test";
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testMessage);
-        auto frameData = WebSocket::WebSocketProtocol::generateFrame(frame);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testMessage);
+        auto frameData = nob::WebSocketProtocol::generateFrame(frame);
         
         // Check header structure
         bool result = assertTrue(frameData.size() >= 2, "Frame has minimum header size");
@@ -384,7 +384,7 @@ int main() {
             
             result = result && assertTrue(finSet, "FIN bit is set in header") &&
                            assertTrue(rsvClear, "RSV bits are clear in header") &&
-                           assertEqual(static_cast<uint8_t>(WebSocket::websocketOpcode::TEXT), opcode, "Opcode matches in header");
+                           assertEqual(static_cast<uint8_t>(nob::websocketOpcode::TEXT), opcode, "Opcode matches in header");
             
             // Check second byte: MASK + Payload length
             uint8_t secondByte = frameData[1];
@@ -423,8 +423,8 @@ int main() {
         
         // Generate multiple frames
         for (const auto& message : messages) {
-            auto frame = WebSocket::WebSocketProtocol::createTextFrame(message);
-            auto frameData = WebSocket::WebSocketProtocol::generateFrame(frame);
+            auto frame = nob::WebSocketProtocol::createTextFrame(message);
+            auto frameData = nob::WebSocketProtocol::generateFrame(frame);
             allFrameData.push_back(frameData);
         }
         
@@ -438,15 +438,15 @@ int main() {
         bool result = true;
         size_t offset = 0;
         for (size_t i = 0; i < messages.size() && result; ++i) {
-            WebSocket::WebSocketFrame parsedFrame;
+            nob::WebSocketFrame parsedFrame;
             size_t bytesConsumed = 0;
             
             std::vector<uint8_t> remainingData(combinedData.begin() + offset, combinedData.end());
-            auto parseResult = WebSocket::WebSocketProtocol::parseFrame(remainingData, parsedFrame, bytesConsumed);
+            auto parseResult = nob::WebSocketProtocol::parseFrame(remainingData, parsedFrame, bytesConsumed);
             
             result = result && assertTrue(parseResult.isSuccess(), "Frame " + std::to_string(i+1) + " parsing succeeds") &&
                               assertEqual(messages[i].length(), parsedFrame.PayloadLength, "Frame " + std::to_string(i+1) + " payload length") &&
-                              assertEqual(static_cast<size_t>(WebSocket::websocketOpcode::TEXT), static_cast<size_t>(parsedFrame.Opcode), "Frame " + std::to_string(i+1) + " opcode") &&
+                              assertEqual(static_cast<size_t>(nob::websocketOpcode::TEXT), static_cast<size_t>(parsedFrame.Opcode), "Frame " + std::to_string(i+1) + " opcode") &&
                               assertTrue(bytesConsumed > 0, "Frame " + std::to_string(i+1) + " consumes bytes");
             
             offset += bytesConsumed;
@@ -467,8 +467,8 @@ int main() {
         std::cout << "\n--- Test 20: Edge Case - Maximum Small Frame ---" << std::endl;
         
         std::string testString(125, 'E'); // Exactly 125 bytes
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
-        auto frameData = WebSocket::WebSocketProtocol::generateFrame(frame);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
+        auto frameData = nob::WebSocketProtocol::generateFrame(frame);
         
         // Should use 2-byte header (no extended length)
         bool result = assertEqual(125 + 2, frameData.size(), "Max small frame uses 2-byte header") &&
@@ -486,8 +486,8 @@ int main() {
         std::cout << "\n--- Test 21: Edge Case - Minimum Large Frame ---" << std::endl;
         
         std::string testString(126, 'F'); // Exactly 126 bytes
-        auto frame = WebSocket::WebSocketProtocol::createTextFrame(testString);
-        auto frameData = WebSocket::WebSocketProtocol::generateFrame(frame);
+        auto frame = nob::WebSocketProtocol::createTextFrame(testString);
+        auto frameData = nob::WebSocketProtocol::generateFrame(frame);
         
         // Should use 4-byte header (16-bit extended length)
         bool result = assertEqual(126 + 4, frameData.size(), "Min large frame uses 4-byte header") &&

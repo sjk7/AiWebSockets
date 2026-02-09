@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <numeric>
 
-namespace WebSocket {
+namespace nob {
 
 /**
  * @brief Creates test data with sequential byte pattern
@@ -50,4 +50,4 @@ inline bool isDataIntegrityValid(const std::vector<uint8_t>& receivedData, size_
     return true;
 }
 
-} // namespace WebSocket
+} // namespace nob

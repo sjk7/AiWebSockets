@@ -23,7 +23,7 @@
 #include <sys/epoll.h>
 #endif
 
-namespace WebSocket {
+namespace nob {
 
 // Common pair type aliases
 using ReceiveResult = std::pair<Result, std::vector<uint8_t>>;
@@ -176,4 +176,4 @@ private:
     static std::string getAddressString(const struct sockaddr* addr);
 };
 
-} // namespace WebSocket
+} // namespace nob

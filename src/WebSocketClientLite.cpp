@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace WebSocket {
+namespace nob {
 
 WebSocketClientLite::WebSocketClientLite(const std::string& host, uint16_t port)
     : m_serverHost(host), m_serverPort(port), m_connected(false) {
@@ -323,4 +323,4 @@ Result WebSocketClientLite::sendWebSocketFrame(const std::vector<uint8_t>& data,
     return m_socket->send(frame);
 }
 
-} // namespace WebSocket
+} // namespace nob

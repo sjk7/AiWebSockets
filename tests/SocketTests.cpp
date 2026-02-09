@@ -9,8 +9,8 @@ int main() {
     std::cout << "Running Socket Tests..." << std::endl;
     
     // Basic socket creation test
-    WebSocket::Socket socket;
-    auto result = socket.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP);
+    nob::Socket socket;
+    auto result = socket.create(nob::socketFamily::IPV4, nob::socketType::TCP);
     
     if (result.isSuccess()) {
         std::cout << "✅ Socket creation test passed" << std::endl;

@@ -2,7 +2,7 @@
 #include <sstream>
 #include <algorithm>
 
-namespace WebSocket {
+namespace nob {
 
 HttpWsServer::HttpWsServer(uint16_t port, 
                            const std::string& bindAddress,
@@ -703,4 +703,4 @@ std::string HttpWsServer::generateHTTPResponse(const std::string& status, const 
     return std::string(response.begin(), response.end());
 }
 
-} // namespace WebSocket
+} // namespace nob

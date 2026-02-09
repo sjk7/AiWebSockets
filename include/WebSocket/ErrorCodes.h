@@ -3,7 +3,7 @@
 #include "Types.h"
 #include <string>
 
-namespace WebSocket {
+namespace nob {
 
 class Result {
 private:
@@ -73,4 +73,4 @@ int getLastSystemErrorCode();
 // Platform-specific error message retrieval (full string - use sparingly)
 std::string getSystemErrorMessage(int errorCode);
 
-} // namespace WebSocket
+} // namespace nob
