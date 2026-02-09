@@ -582,7 +582,7 @@ void HttpWsServer::removeConnection(const std::string& ip) {
         if (it != m_connectionMap.end()) {
             it->second.currentConnections--;
             if (it->second.currentConnections <= 0) {
-                m_connectionMap.erase(it);
+                m_connectionMap.erase(it++);
             }
         }
         m_currentConnections--;

@@ -517,7 +517,7 @@ void WebSocketServerLite::removeConnection(const std::string& clientIP) {
     if (it != ipConnectionMap.end()) {
         it->second.currentConnections--;
         if (it->second.currentConnections <= 0) {
-            ipConnectionMap.erase(it);
+            ipConnectionMap.erase(it++);
         }
     }
 }
