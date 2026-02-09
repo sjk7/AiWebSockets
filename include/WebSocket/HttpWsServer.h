@@ -19,9 +19,9 @@ struct HTTPRequest;
 struct ClientConnection;
 
 /**
- * @brief Security configuration for the HTTP server
+ * @brief Protection configuration for the HTTP/WebSocket server
  */
-struct SecurityConfig {
+struct ProtectionConfig {
     // Connection limits
     int maxConnectionsPerIP = 10;           // Max connections from single IP
     int maxConnectionsTotal = 100;          // Max total connections
@@ -105,7 +105,7 @@ private:
     std::string m_bindAddress;
     uint16_t m_port;
     bool m_running;
-    SecurityConfig m_securityConfig;
+    ProtectionConfig m_protectionConfig;
     
     // Connection tracking
     std::map<std::string, ConnectionInfo> m_connectionMap;
@@ -121,7 +121,7 @@ private:
     std::function<std::string(const WebSocketMessageWithIP&)> m_onWebSocketMessage;
     std::function<void(const std::string&)> m_onConnect;
     std::function<void(const std::string&)> m_onDisconnect;
-    std::function<void(const std::string&, const std::string&)> m_onSecurityViolation;
+    std::function<void(const std::string&, const std::string&)> m_onProtectionViolation;
     std::function<void(const std::string&)> m_onError;
     
     // Server thread
@@ -132,66 +132,66 @@ public:
     // Constructor
     explicit HttpWsServer(uint16_t port = 8080, 
                          const std::string& bindAddress = "127.0.0.1",
-                         const SecurityConfig& config = SecurityConfig{});
+                         const ProtectionConfig& config = ProtectionConfig{});
     
     // Destructor
     ~HttpWsServer();
     
     // Configuration methods
-    HttpWsServer& SetPort(uint16_t port);
-    HttpWsServer& SetBindAddress(const std::string& address);
-    HttpWsServer& SetSecurityConfig(const SecurityConfig& config);
+    HttpWsServer& setPort(uint16_t port);
+    HttpWsServer& setBindAddress(const std::string& address);
+    HttpWsServer& setProtectionConfig(const ProtectionConfig& config);
     
     // Callback registration
-    HttpWsServer& OnHttpRequest(const std::function<std::string(const HTTPRequest&)>& callback);
-    HttpWsServer& OnWebSocketMessage(const std::function<std::string(const WebSocketMessageWithIP&)>& callback);
-    HttpWsServer& OnConnect(const std::function<void(const std::string&)>& callback);
-    HttpWsServer& OnDisconnect(const std::function<void(const std::string&)>& callback);
-    HttpWsServer& OnSecurityViolation(const std::function<void(const std::string&, const std::string&)>& callback);
-    HttpWsServer& OnError(const std::function<void(const std::string&)>& callback);
+    HttpWsServer& onHttpRequest(const std::function<std::string(const HTTPRequest&)>& callback);
+    HttpWsServer& onWebSocketMessage(const std::function<std::string(const WebSocketMessageWithIP&)>& callback);
+    HttpWsServer& onConnect(const std::function<void(const std::string&)>& callback);
+    HttpWsServer& onDisconnect(const std::function<void(const std::string&)>& callback);
+    HttpWsServer& onProtectionViolation(const std::function<void(const std::string&, const std::string&)>& callback);
+    HttpWsServer& onError(const std::function<void(const std::string&)>& callback);
     
     // Server control
-    Result Start();
-    Result Stop();
-    bool IsRunning() const { return m_running; }
+    Result start();
+    Result stop();
+    bool isRunning() const { return m_running; }
     
     // Server info
-    uint16_t GetPort() const { return m_port; }
-    std::string GetBindAddress() const { return m_bindAddress; }
-    int GetCurrentConnectionCount() const;
-    std::vector<std::string> GetConnectedIPs() const;
+    uint16_t getPort() const { return m_port; }
+    std::string getBindAddress() const { return m_bindAddress; }
+    int getCurrentConnectionCount() const;
+    std::vector<std::string> getConnectedIPs() const;
     
-    // Security management
-    void BlockIP(const std::string& ip);
-    void UnblockIP(const std::string& ip);
-    std::vector<std::string> GetBlockedIPs() const;
-    SecurityConfig GetSecurityConfig() const { return m_securityConfig; }
+    // Protection management
+    void blockIP(const std::string& ip);
+    void unblockIP(const std::string& ip);
+    std::vector<std::string> getBlockedIPs() const;
+    ProtectionConfig getProtectionConfig() const { return m_protectionConfig; }
 
 private:
     // Internal methods
-    void ServerLoop();
-    void HandleClient(std::unique_ptr<ClientConnection> client);
-    void HandleHTTPRequest(ClientConnection* client, const std::string& request);
-    void HandleWebSocketConnection(ClientConnection* client, const std::string& request);
-    void SendHTTPResponse(ClientConnection* client, const std::string& status, 
+    void serverLoop();
+    void handleClient(std::unique_ptr<ClientConnection> client);
+    void handleHTTPRequest(ClientConnection* client, const std::string& request);
+    void handleWebSocketConnection(ClientConnection* client, const std::string& request);
+    void sendHTTPResponse(ClientConnection* client, const std::string& status, 
                          const std::string& contentType, const std::string& body);
-    void SendHTTPResponseSync(ClientConnection* client, const std::string& status, 
+    void sendHTTPResponseSync(ClientConnection* client, const std::string& status, 
                              const std::string& contentType, const std::string& body);
     
-    // Security methods
-    bool IsIPBlocked(const std::string& ip) const;
-    bool IsConnectionAllowed(const std::string& ip);
-    bool IsRequestSizeValid(const std::string& request, const std::string& clientIP) const;
-    bool IsMessageSizeValid(const std::string& message, const std::string& clientIP) const;
-    void UpdateConnectionInfo(const std::string& ip, bool isWebSocket = false);
-    void RemoveConnection(const std::string& ip);
-    void CleanupStaleConnections();
+    // Protection methods
+    bool isIPBlocked(const std::string& ip) const;
+    bool isConnectionAllowed(const std::string& ip);
+    bool isRequestSizeValid(const std::string& request, const std::string& clientIP) const;
+    bool isMessageSizeValid(const std::string& message, const std::string& clientIP) const;
+    void updateConnectionInfo(const std::string& ip, bool isWebSocket = false);
+    void removeConnection(const std::string& ip);
+    void cleanupStaleConnections();
     
     // Utility methods
-    std::string GetClientIP(const Socket& socket);
-    HTTPRequest ParseHTTPRequest(const std::string& request, const std::string& clientIP);
-    bool IsWebSocketUpgrade(const std::string& request) const;
-    std::string GenerateHTTPResponse(const std::string& status, const std::string& contentType, const std::string& body);
+    std::string getClientIP(const Socket& socket);
+    HTTPRequest parseHTTPRequest(const std::string& request, const std::string& clientIP);
+    bool isWebSocketUpgrade(const std::string& request) const;
+    std::string generateHTTPResponse(const std::string& status, const std::string& contentType, const std::string& body);
 };
 
 } // namespace WebSocket

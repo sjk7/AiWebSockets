@@ -7,60 +7,60 @@ namespace WebSocket {
 
 HttpWsServer::HttpWsServer(uint16_t port, 
                            const std::string& bindAddress,
-                           const SecurityConfig& config)
-    : m_bindAddress(bindAddress), m_port(port), m_running(false), m_securityConfig(config) {
+                           const ProtectionConfig& config)
+    : m_bindAddress(bindAddress), m_port(port), m_running(false), m_protectionConfig(config) {
 }
 
 HttpWsServer::~HttpWsServer() {
-    Stop();
+    stop();
 }
 
-HttpWsServer& HttpWsServer::SetPort(uint16_t port) {
+HttpWsServer& HttpWsServer::setPort(uint16_t port) {
     m_port = port;
     return *this;
 }
 
-HttpWsServer& HttpWsServer::SetBindAddress(const std::string& address) {
+HttpWsServer& HttpWsServer::setBindAddress(const std::string& address) {
     m_bindAddress = address;
     return *this;
 }
 
-HttpWsServer& HttpWsServer::SetSecurityConfig(const SecurityConfig& config) {
-    m_securityConfig = config;
+HttpWsServer& HttpWsServer::setProtectionConfig(const ProtectionConfig& config) {
+    m_protectionConfig = config;
     return *this;
 }
 
-HttpWsServer& HttpWsServer::OnHttpRequest(const std::function<std::string(const HTTPRequest&)>& callback) {
+HttpWsServer& HttpWsServer::onHttpRequest(const std::function<std::string(const HTTPRequest&)>& callback) {
     m_onHttpRequest = callback;
     return *this;
 }
 
-HttpWsServer& HttpWsServer::OnWebSocketMessage(const std::function<std::string(const WebSocketMessageWithIP&)>& callback) {
+HttpWsServer& HttpWsServer::onWebSocketMessage(const std::function<std::string(const WebSocketMessageWithIP&)>& callback) {
     m_onWebSocketMessage = callback;
     return *this;
 }
 
-HttpWsServer& HttpWsServer::OnConnect(const std::function<void(const std::string&)>& callback) {
+HttpWsServer& HttpWsServer::onConnect(const std::function<void(const std::string&)>& callback) {
     m_onConnect = callback;
     return *this;
 }
 
-HttpWsServer& HttpWsServer::OnDisconnect(const std::function<void(const std::string&)>& callback) {
+HttpWsServer& HttpWsServer::onDisconnect(const std::function<void(const std::string&)>& callback) {
     m_onDisconnect = callback;
     return *this;
 }
 
-HttpWsServer& HttpWsServer::OnSecurityViolation(const std::function<void(const std::string&, const std::string&)>& callback) {
-    m_onSecurityViolation = callback;
+HttpWsServer& HttpWsServer::onProtectionViolation(const std::function<void(const std::string&, const std::string&)>& callback) {
+    m_onProtectionViolation = callback;
     return *this;
 }
 
-HttpWsServer& HttpWsServer::OnError(const std::function<void(const std::string&)>& callback) {
+HttpWsServer& HttpWsServer::onError(const std::function<void(const std::string&)>& callback) {
     m_onError = callback;
     return *this;
 }
 
-Result HttpWsServer::Start() {
+Result HttpWsServer::start() {
     if (m_running) {
         return Result(ERROR_CODE::UNKNOWN_ERROR, "Server is already running");
     }
@@ -94,12 +94,12 @@ Result HttpWsServer::Start() {
     m_shouldStop = false;
     
     // Start server thread
-    m_serverThread = std::make_unique<std::thread>(&HttpWsServer::ServerLoop, this);
+    m_serverThread = std::make_unique<std::thread>(&HttpWsServer::serverLoop, this);
     
     return Result();
 }
 
-Result HttpWsServer::Stop() {
+Result HttpWsServer::stop() {
     if (!m_running) {
         return Result();
     }
@@ -131,11 +131,11 @@ Result HttpWsServer::Stop() {
     return Result();
 }
 
-int HttpWsServer::GetCurrentConnectionCount() const {
+int HttpWsServer::getCurrentConnectionCount() const {
     return m_currentConnections.load();
 }
 
-std::vector<std::string> HttpWsServer::GetConnectedIPs() const {
+std::vector<std::string> HttpWsServer::getConnectedIPs() const {
     std::lock_guard<std::mutex> lock(m_clientsMutex);
     std::vector<std::string> ips;
     for (const auto& client : m_clients) {
@@ -146,10 +146,10 @@ std::vector<std::string> HttpWsServer::GetConnectedIPs() const {
     return ips;
 }
 
-void HttpWsServer::BlockIP(const std::string& ip) {
+void HttpWsServer::blockIP(const std::string& ip) {
     std::lock_guard<std::mutex> lock(m_connectionMutex);
-    if (std::find(m_securityConfig.blockedIPs.begin(), m_securityConfig.blockedIPs.end(), ip) == m_securityConfig.blockedIPs.end()) {
-        m_securityConfig.blockedIPs.push_back(ip);
+    if (std::find(m_protectionConfig.blockedIPs.begin(), m_protectionConfig.blockedIPs.end(), ip) == m_protectionConfig.blockedIPs.end()) {
+        m_protectionConfig.blockedIPs.push_back(ip);
         
         // Disconnect existing connections from this IP
         std::lock_guard<std::mutex> clientsLock(m_clientsMutex);
@@ -161,18 +161,18 @@ void HttpWsServer::BlockIP(const std::string& ip) {
     }
 }
 
-void HttpWsServer::UnblockIP(const std::string& ip) {
+void HttpWsServer::unblockIP(const std::string& ip) {
     std::lock_guard<std::mutex> lock(m_connectionMutex);
-    auto it = std::remove(m_securityConfig.blockedIPs.begin(), m_securityConfig.blockedIPs.end(), ip);
-    m_securityConfig.blockedIPs.erase(it, m_securityConfig.blockedIPs.end());
+    auto it = std::remove(m_protectionConfig.blockedIPs.begin(), m_protectionConfig.blockedIPs.end(), ip);
+    m_protectionConfig.blockedIPs.erase(it, m_protectionConfig.blockedIPs.end());
 }
 
-std::vector<std::string> HttpWsServer::GetBlockedIPs() const {
+std::vector<std::string> HttpWsServer::getBlockedIPs() const {
     std::lock_guard<std::mutex> lock(m_connectionMutex);
-    return m_securityConfig.blockedIPs;
+    return m_protectionConfig.blockedIPs;
 }
 
-void HttpWsServer::ServerLoop() {
+void HttpWsServer::serverLoop() {
     while (!m_shouldStop) {
         // Accept new connection
         auto [acceptResult, clientSocket] = m_serverSocket->accept();
@@ -188,12 +188,12 @@ void HttpWsServer::ServerLoop() {
             if (m_onError) m_onError("Failed to enable async I/O: " + asyncResult.GetErrorMessage());
         }
         
-        std::string clientIP = GetClientIP(*clientSocket);
+        std::string clientIP = getClientIP(*clientSocket);
         
         // Security checks
-        if (!IsConnectionAllowed(clientIP)) {
-            if (m_onSecurityViolation) {
-                m_onSecurityViolation(clientIP, "Connection rejected: Security limits exceeded");
+        if (!isConnectionAllowed(clientIP)) {
+            if (m_onProtectionViolation) {
+                m_onProtectionViolation(clientIP, "Connection rejected: Security limits exceeded");
             }
             clientSocket->close();
             continue;
@@ -206,15 +206,15 @@ void HttpWsServer::ServerLoop() {
         client->connectTime = std::chrono::steady_clock::now();
         
         // Update connection tracking
-        UpdateConnectionInfo(clientIP);
+        updateConnectionInfo(clientIP);
         
         // Handle client in separate thread
-        std::thread clientThread(&HttpWsServer::HandleClient, this, std::move(client));
+        std::thread clientThread(&HttpWsServer::handleClient, this, std::move(client));
         clientThread.detach();
     }
 }
 
-void HttpWsServer::HandleClient(std::unique_ptr<ClientConnection> client) {
+void HttpWsServer::handleClient(std::unique_ptr<ClientConnection> client) {
     if (!client || !client->socket) return;
     
     std::string clientIP = client->clientIP;
@@ -231,65 +231,65 @@ void HttpWsServer::HandleClient(std::unique_ptr<ClientConnection> client) {
     }
     
     // Receive request with short timeout to prevent hanging
-    auto [receiveResult, requestData] = m_clients.back()->socket->receive(m_securityConfig.maxRequestSize, 1000); // 1 second timeout
+    auto [receiveResult, requestData] = m_clients.back()->socket->receive(m_protectionConfig.maxRequestSize, 1000); // 1 second timeout
     if (!receiveResult.IsSuccess() || requestData.empty()) {
-        RemoveConnection(clientIP);
+        removeConnection(clientIP);
         return;
     }
     
     std::string request(requestData.begin(), requestData.end());
     
     // Validate request size
-    if (m_securityConfig.enableRequestSizeLimit && !IsRequestSizeValid(request, clientIP)) {
-        if (m_onSecurityViolation) {
-            m_onSecurityViolation(clientIP, "Request too large");
+    if (m_protectionConfig.enableRequestSizeLimit && !isRequestSizeValid(request, clientIP)) {
+        if (m_onProtectionViolation) {
+            m_onProtectionViolation(clientIP, "Request too large");
         }
-        RemoveConnection(clientIP);
+        removeConnection(clientIP);
         return;
     }
     
     // Handle based on request type
-    if (IsWebSocketUpgrade(request)) {
-        HandleWebSocketConnection(m_clients.back().get(), request);
+    if (isWebSocketUpgrade(request)) {
+        handleWebSocketConnection(m_clients.back().get(), request);
     } else {
-        HandleHTTPRequest(m_clients.back().get(), request);
+        handleHTTPRequest(m_clients.back().get(), request);
     }
     
     // Remove connection
-    RemoveConnection(clientIP);
+    removeConnection(clientIP);
 }
 
-void HttpWsServer::HandleHTTPRequest(ClientConnection* client, const std::string& request) {
+void HttpWsServer::handleHTTPRequest(ClientConnection* client, const std::string& request) {
     if (!client || !client->socket) return;
     
-    HTTPRequest httpRequest = ParseHTTPRequest(request, client->clientIP);
+    HTTPRequest httpRequest = parseHTTPRequest(request, client->clientIP);
     
     std::string response;
     if (m_onHttpRequest) {
         try {
             response = m_onHttpRequest(httpRequest);
         } catch (const std::exception& e) {
-            response = GenerateHTTPResponse("500 Internal Server Error", "text/plain", "Server Error");
+            response = generateHTTPResponse("500 Internal Server Error", "text/plain", "Server Error");
             if (m_onError) m_onError("HTTP request handler error: " + std::string(e.what()));
         }
     } else {
         // Default response
         if (httpRequest.path == "/") {
-            response = GenerateHTTPResponse("200 OK", "text/html", 
+            response = generateHTTPResponse("200 OK", "text/html", 
                 "<!DOCTYPE html><html><head><title>Secure HTTP + WebSocket Server</title></head>"
                 "<body><h1>Secure HTTP + WebSocket Server</h1>"
                 "<p>This server handles both HTTP and WebSocket with security features!</p>"
-                "<p>Connected clients: " + std::to_string(GetCurrentConnectionCount()) + "</p>"
+                "<p>Connected clients: " + std::to_string(getCurrentConnectionCount()) + "</p>"
                 "</body></html>");
         } else {
-            response = GenerateHTTPResponse("404 Not Found", "text/plain", "Not Found");
+            response = generateHTTPResponse("404 Not Found", "text/plain", "Not Found");
         }
     }
     
-    SendHTTPResponse(client, "200 OK", "text/html", response);
+    sendHTTPResponse(client, "200 OK", "text/html", response);
 }
 
-void HttpWsServer::HandleWebSocketConnection(ClientConnection* client, const std::string& request) {
+void HttpWsServer::handleWebSocketConnection(ClientConnection* client, const std::string& request) {
     if (!client || !client->socket) return;
     
     client->isWebSocket = true;
@@ -299,9 +299,9 @@ void HttpWsServer::HandleWebSocketConnection(ClientConnection* client, const std
     auto handshakeResult = WebSocketProtocol::ValidateHandshakeRequest(request, info);
     
     if (!handshakeResult.IsSuccess()) {
-        SendHTTPResponse(client, "400 Bad Request", "text/plain", "Invalid WebSocket handshake");
-        if (m_onSecurityViolation) {
-            m_onSecurityViolation(client->clientIP, "Invalid WebSocket handshake");
+        sendHTTPResponse(client, "400 Bad Request", "text/plain", "Invalid WebSocket handshake");
+        if (m_onProtectionViolation) {
+            m_onProtectionViolation(client->clientIP, "Invalid WebSocket handshake");
         }
         return;
     }
@@ -316,7 +316,7 @@ void HttpWsServer::HandleWebSocketConnection(ClientConnection* client, const std
     
     // Handle WebSocket messages
     while (!m_shouldStop && client->socket && client->socket->valid()) {
-        auto [msgResult, msgData] = client->socket->receive(m_securityConfig.maxMessageSize);
+        auto [msgResult, msgData] = client->socket->receive(m_protectionConfig.maxMessageSize);
         if (!msgResult.IsSuccess() || msgData.empty()) {
             break;
         }
@@ -338,9 +338,9 @@ void HttpWsServer::HandleWebSocketConnection(ClientConnection* client, const std
             std::string message(frame.PayloadData.begin(), frame.PayloadData.end());
             
             // Validate message size
-            if (m_securityConfig.enableMessageSizeLimit && !IsMessageSizeValid(message, client->clientIP)) {
-                if (m_onSecurityViolation) {
-                    m_onSecurityViolation(client->clientIP, "WebSocket message too large");
+            if (m_protectionConfig.enableMessageSizeLimit && !isMessageSizeValid(message, client->clientIP)) {
+                if (m_onProtectionViolation) {
+                    m_onProtectionViolation(client->clientIP, "WebSocket message too large");
                 }
                 break;
             }
@@ -368,7 +368,7 @@ void HttpWsServer::HandleWebSocketConnection(ClientConnection* client, const std
     }
 }
 
-void HttpWsServer::SendHTTPResponseSync(ClientConnection* client, const std::string& status, 
+void HttpWsServer::sendHTTPResponseSync(ClientConnection* client, const std::string& status, 
                                                     const std::string& contentType, const std::string& body) {
     if (!client || !client->socket) return;
     
@@ -414,7 +414,7 @@ void HttpWsServer::SendHTTPResponseSync(ClientConnection* client, const std::str
     client->socket->close();
 }
 
-void HttpWsServer::SendHTTPResponse(ClientConnection* client, const std::string& status, 
+void HttpWsServer::sendHTTPResponse(ClientConnection* client, const std::string& status, 
                                                const std::string& contentType, const std::string& body) {
     if (!client || !client->socket) return;
     
@@ -423,7 +423,7 @@ void HttpWsServer::SendHTTPResponse(ClientConnection* client, const std::string&
         auto asyncResult = client->socket->enableAsyncIO();
         if (!asyncResult.IsSuccess()) {
             // Fallback to sync if async fails
-            SendHTTPResponseSync(client, status, contentType, body);
+            sendHTTPResponseSync(client, status, contentType, body);
             return;
         }
     }
@@ -466,7 +466,7 @@ void HttpWsServer::SendHTTPResponse(ClientConnection* client, const std::string&
     auto sendResult = client->socket->sendAsync(response);
     if (!sendResult.IsSuccess()) {
         // Fallback to sync if async send fails
-        SendHTTPResponseSync(client, status, contentType, body);
+        sendHTTPResponseSync(client, status, contentType, body);
         return;
     }
     
@@ -475,11 +475,11 @@ void HttpWsServer::SendHTTPResponse(ClientConnection* client, const std::string&
     client->socket->close();
 }
 
-bool HttpWsServer::IsIPBlocked(const std::string& ip) const {
-    return std::find(m_securityConfig.blockedIPs.begin(), m_securityConfig.blockedIPs.end(), ip) != m_securityConfig.blockedIPs.end();
+bool HttpWsServer::isIPBlocked(const std::string& ip) const {
+    return std::find(m_protectionConfig.blockedIPs.begin(), m_protectionConfig.blockedIPs.end(), ip) != m_protectionConfig.blockedIPs.end();
 }
 
-bool HttpWsServer::IsConnectionAllowed(const std::string& ip) {
+bool HttpWsServer::isConnectionAllowed(const std::string& ip) {
     std::lock_guard<std::mutex> lock(m_connectionMutex);
     
     // Skip security limits for local addresses
@@ -488,12 +488,12 @@ bool HttpWsServer::IsConnectionAllowed(const std::string& ip) {
     }
     
     // Check if IP is blocked
-    if (IsIPBlocked(ip)) {
+    if (isIPBlocked(ip)) {
         return false;
     }
     
     // Check total connection limit
-    if (m_currentConnections.load() >= m_securityConfig.maxConnectionsTotal) {
+    if (m_currentConnections.load() >= m_protectionConfig.maxConnectionsTotal) {
         return false;
     }
     
@@ -503,7 +503,7 @@ bool HttpWsServer::IsConnectionAllowed(const std::string& ip) {
         auto& info = it->second;
         
         // Check current connections from this IP
-        if (info.currentConnections >= m_securityConfig.maxConnectionsPerIP) {
+        if (info.currentConnections >= m_protectionConfig.maxConnectionsPerIP) {
             return false;
         }
         
@@ -512,13 +512,13 @@ bool HttpWsServer::IsConnectionAllowed(const std::string& ip) {
         auto timeSincePeriodStart = std::chrono::duration_cast<std::chrono::seconds>(now - info.requestPeriodStart);
         
         // Reset request counter if period has elapsed
-        if (timeSincePeriodStart.count() >= m_securityConfig.requestResetPeriodSeconds) {
+        if (timeSincePeriodStart.count() >= m_protectionConfig.requestResetPeriodSeconds) {
             info.requestsThisPeriod = 0;
             info.requestPeriodStart = now;
         }
         
         // Check if this IP has exceeded requests per period
-        if (info.requestsThisPeriod >= m_securityConfig.maxRequestsPerIP) {
+        if (info.requestsThisPeriod >= m_protectionConfig.maxRequestsPerIP) {
             return false;
         }
     }
@@ -526,23 +526,23 @@ bool HttpWsServer::IsConnectionAllowed(const std::string& ip) {
     return true;
 }
 
-bool HttpWsServer::IsRequestSizeValid(const std::string& request, const std::string& clientIP) const {
+bool HttpWsServer::isRequestSizeValid(const std::string& request, const std::string& clientIP) const {
     // Skip size validation for local addresses
     if (clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost") {
         return true;
     }
-    return request.size() <= static_cast<size_t>(m_securityConfig.maxRequestSize);
+    return request.size() <= static_cast<size_t>(m_protectionConfig.maxRequestSize);
 }
 
-bool HttpWsServer::IsMessageSizeValid(const std::string& message, const std::string& clientIP) const {
+bool HttpWsServer::isMessageSizeValid(const std::string& message, const std::string& clientIP) const {
     // Skip size validation for local addresses
     if (clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost") {
         return true;
     }
-    return message.size() <= static_cast<size_t>(m_securityConfig.maxMessageSize);
+    return message.size() <= static_cast<size_t>(m_protectionConfig.maxMessageSize);
 }
 
-void HttpWsServer::UpdateConnectionInfo(const std::string& ip, bool isWebSocket) {
+void HttpWsServer::updateConnectionInfo(const std::string& ip, bool isWebSocket) {
     // Skip tracking for local addresses (they're trusted)
     if (ip == "127.0.0.1" || ip == "::1" || ip == "localhost") {
         m_currentConnections++;
@@ -570,7 +570,7 @@ void HttpWsServer::UpdateConnectionInfo(const std::string& ip, bool isWebSocket)
     m_currentConnections++;
 }
 
-void HttpWsServer::RemoveConnection(const std::string& ip) {
+void HttpWsServer::removeConnection(const std::string& ip) {
     // Skip tracking cleanup for local addresses
     if (ip == "127.0.0.1" || ip == "::1" || ip == "localhost") {
         m_currentConnections--;
@@ -607,11 +607,11 @@ void HttpWsServer::RemoveConnection(const std::string& ip) {
     }
 }
 
-std::string HttpWsServer::GetClientIP(const Socket& socket) {
+std::string HttpWsServer::getClientIP(const Socket& socket) {
     return socket.remoteAddress();
 }
 
-HTTPRequest HttpWsServer::ParseHTTPRequest(const std::string& request, const std::string& clientIP) {
+HTTPRequest HttpWsServer::parseHTTPRequest(const std::string& request, const std::string& clientIP) {
     HTTPRequest httpRequest;
     httpRequest.clientIP = clientIP;
     
@@ -652,7 +652,7 @@ HTTPRequest HttpWsServer::ParseHTTPRequest(const std::string& request, const std
     return httpRequest;
 }
 
-bool HttpWsServer::IsWebSocketUpgrade(const std::string& request) const {
+bool HttpWsServer::isWebSocketUpgrade(const std::string& request) const {
     std::string lowerRequest = request;
     std::transform(lowerRequest.begin(), lowerRequest.end(), lowerRequest.begin(), ::tolower);
     
@@ -661,7 +661,7 @@ bool HttpWsServer::IsWebSocketUpgrade(const std::string& request) const {
            lowerRequest.find("sec-websocket-key:") != std::string::npos;
 }
 
-std::string HttpWsServer::GenerateHTTPResponse(const std::string& status, const std::string& contentType, const std::string& body) {
+std::string HttpWsServer::generateHTTPResponse(const std::string& status, const std::string& contentType, const std::string& body) {
     std::vector<uint8_t> response;
     response.reserve(256 + body.size()); // Pre-allocate to avoid reallocations
     
