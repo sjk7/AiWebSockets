@@ -199,19 +199,11 @@ Socket::~Socket() {
 			return Result();
 		}
 
-		auto nativeSocket = getNativeSocket();
 #ifdef _WIN32
-		int result = ::shutdown(reinterpret_cast<SOCKET>(nativeSocket), SD_BOTH);
+		return shutdownNativeSocket(SD_BOTH);
 #else
-		int result = ::shutdown(static_cast<int>(nativeSocket), SHUT_RDWR);
+		return shutdownNativeSocket(SHUT_RDWR);
 #endif
-
-		if (result == SOCKET_ERROR) {
-			updateLastError();
-			return Result(ErrorCode::unknownError, getLastSystemErrorCode());
-		}
-
-		return Result();
 	}
 
 	Result Socket::close() {
@@ -252,32 +244,10 @@ Socket::~Socket() {
 			return { Result(ErrorCode::invalidParameter, "Invalid data parameters"), 0 };
 		}
 
-		size_t totalSent = 0;
-		const char* buffer = static_cast<const char*>(data);
-		auto nativeSocket = getNativeSocket();
+		size_t bytesSent = 0;
+		Result result = sendNativeSocket(data, length, &bytesSent);
 
-		while (totalSent < length) {
-#ifdef _WIN32
-			int result = ::send(reinterpret_cast<SOCKET>(nativeSocket), buffer + totalSent, (int)(length - totalSent), 0);
-#else
-			ssize_t result = ::send(static_cast<int>(nativeSocket), buffer + totalSent, length - totalSent, 0);
-#endif
-
-			if (result < 0) {
-				updateLastError();
-				return { Result(ErrorCode::socketSendFailed, getLastSystemErrorCode()), totalSent };
-			}
-
-			// Handle partial sends (result == 0 means connection closed)
-			if (result == 0) {
-				printf("DEBUG: Send returned 0 - connection closed\n");
-				break; // Connection closed
-			}
-
-			totalSent += result;
-		}
-
-		return { Result(), totalSent };
+		return { result, bytesSent };
 	}
 
 	ReceiveResult Socket::receiveRaw(void* buffer, size_t bufferSize) {
@@ -289,25 +259,15 @@ Socket::~Socket() {
 			return { Result(ErrorCode::invalidParameter, "Invalid buffer parameters"), {} };
 		}
 
-		auto nativeSocket = getNativeSocket();
-#ifdef _WIN32
-		int result = recv(reinterpret_cast<SOCKET>(nativeSocket), (char*)buffer, (int)bufferSize, 0);
-#else
-		ssize_t result = recv(static_cast<int>(nativeSocket), buffer, bufferSize, 0);
-#endif
+		size_t bytesReceived = 0;
+		Result result = receiveNativeSocket(buffer, bufferSize, &bytesReceived);
 
-		if (result < 0) {
-			updateLastError();
-			return { Result(ErrorCode::socketReceiveFailed, getLastSystemErrorCode()), {} };
-		}
-
-		// result == 0 means connection closed gracefully
-		if (result == 0) {
-			return { Result(), {} };
+		if (result.isError()) {
+			return { result, {} };
 		}
 
 		// Create vector from received data
-		std::vector<uint8_t> data((uint8_t*)buffer, (uint8_t*)buffer + result);
+		std::vector<uint8_t> data((uint8_t*)buffer, (uint8_t*)buffer + bytesReceived);
 		return { Result(), data };
 	}
 
@@ -384,30 +344,11 @@ Socket::~Socket() {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
-		auto nativeSocket = getNativeSocket();
-#ifdef _WIN32
-		u_long mode = blocking ? 0 : 1;
-		int result = ioctlsocket(reinterpret_cast<SOCKET>(nativeSocket), FIONBIO, &mode);
-		if (result != 0) {
-			updateLastError();
-			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
+		Result result = setBlockingNative(blocking);
+		if (result.isSuccess()) {
+			m_isBlocking = blocking;
 		}
-#else
-		int flags = fcntl(static_cast<int>(nativeSocket), F_GETFL, 0);
-		if (flags == -1) {
-			updateLastError();
-			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
-		}
-
-		int result = fcntl(static_cast<int>(nativeSocket), F_SETFL, blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK));
-		if (result == -1) {
-			updateLastError();
-			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
-		}
-#endif
-
-		m_isBlocking = blocking;
-		return Result();
+		return result;
 	}
 
 	Result Socket::reuseAddress(bool reuse) {
@@ -443,11 +384,11 @@ Socket::~Socket() {
 			return "";
 		}
 
-		auto nativeSocket = getNativeSocket();
 		struct sockaddr_in addr;
-		socklen_t addrLen = sizeof(addr);
+		int addrLen = sizeof(addr);
 
-		if (getsockname(reinterpret_cast<SOCKET>(nativeSocket), (struct sockaddr*)&addr, &addrLen) != 0) {
+		Result result = getSocketNameNative(&addr, &addrLen);
+		if (result.isError()) {
 			return "";
 		}
 
@@ -459,11 +400,11 @@ Socket::~Socket() {
 			return 0;
 		}
 
-		auto nativeSocket = getNativeSocket();
 		struct sockaddr_in addr;
-		socklen_t addrLen = sizeof(addr);
+		int addrLen = sizeof(addr);
 
-		if (getsockname(reinterpret_cast<SOCKET>(nativeSocket), (struct sockaddr*)&addr, &addrLen) != 0) {
+		Result result = getSocketNameNative(&addr, &addrLen);
+		if (result.isError()) {
 			return 0;
 		}
 
@@ -475,11 +416,11 @@ Socket::~Socket() {
 			return "";
 		}
 
-		auto nativeSocket = getNativeSocket();
 		struct sockaddr_in addr;
-		socklen_t addrLen = sizeof(addr);
+		int addrLen = sizeof(addr);
 
-		if (getpeername(reinterpret_cast<SOCKET>(nativeSocket), (struct sockaddr*)&addr, &addrLen) != 0) {
+		Result result = getPeerNameNative(&addr, &addrLen);
+		if (result.isError()) {
 			return "";
 		}
 
@@ -742,33 +683,11 @@ Socket::~Socket() {
 	}
 
 	Result Socket::setSocketOption(int level, int option, const void* value, size_t length) {
-		if (!isValid()) {
-			return Result(ErrorCode::invalidParameter, "Socket not created");
-		}
-
-		if (setsockopt(m_sock, level, option, (const char*)value, (int)length) != 0) {
-			updateLastError();
-			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
-		}
-
-		return Result();
+		return setSocketOptionNative(level, option, value, length);
 	}
 
 	Result Socket::getSocketOption(int level, int option, void* value, size_t* length) const {
-		if (!isValid()) {
-			return Result(ErrorCode::invalidParameter, "Socket not created");
-		}
-
-		socklen_t len = (socklen_t)*length;
-		if (getsockopt(m_sock, level, option, (char*)value, &len) != 0) {
-			// Note: UpdateLastError is not const, so we handle error differently here
-			int systemErrorCode = getLastSystemErrorCode();
-			printf("Socket getsockopt error: %s\n", getSystemErrorMessage(systemErrorCode).c_str());
-			return Result(ErrorCode::socketSetOptionFailed, systemErrorCode);
-		}
-
-		*length = len;
-		return Result();
+		return getSocketOptionNative(level, option, value, length);
 	}
 
 	void Socket::updateLastError() {
@@ -783,7 +702,7 @@ Socket::~Socket() {
 		}
 	}
 
-	SocketAddress Socket::getSocketAddress(const struct sockaddr* addr) const {
+	SocketAddress Socket::getSocketAddress(const struct sockaddr* addr) {
 		if (!addr) {
 			return { "", 0 };
 		}

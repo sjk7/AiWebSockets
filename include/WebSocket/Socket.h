@@ -98,6 +98,10 @@ public:
     void receiveCallback(ReceiveCallbackFn callback);
     void errorCallback(ErrorCallbackFn callback);
 
+    // Helper methods for address conversion
+    static std::string getAddressString(const struct sockaddr* addr);
+    static SocketAddress getSocketAddress(const struct sockaddr* addr);
+
 private:
     // Private constructor for internal use (e.g., Accept)
     explicit Socket(void* nativeSocket);

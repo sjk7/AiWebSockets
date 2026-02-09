@@ -129,6 +129,17 @@ protected:
      */
     Result closeNativeSocket();
 
+    // Additional native operations that need to be moved from Socket.cpp
+    Result sendNativeSocket(const void* data, size_t length, size_t* bytesSent);
+    Result receiveNativeSocket(void* buffer, size_t bufferSize, size_t* bytesReceived);
+    Result shutdownNativeSocket(int how);
+    Result setSocketOptionNative(int level, int option, const void* value, size_t length);
+    Result getSocketOptionNative(int level, int option, void* value, size_t* length) const;
+    Result getSocketNameNative(void* addr, int* addrLen) const;
+    Result getPeerNameNative(void* addr, int* addrLen) const;
+    Result setBlockingNative(bool blocking);
+    Result selectNativeSocket(int timeoutMs, bool* canRead, bool* canWrite) const;
+
 private:
     // Pimpl pattern - hide all native socket details
     std::unique_ptr<SocketImpl> m_impl;
