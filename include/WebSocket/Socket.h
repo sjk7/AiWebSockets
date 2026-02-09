@@ -105,6 +105,7 @@ private:
     // Factory method for creating sockets from native handles
     static std::unique_ptr<Socket> createFromNative(void* nativeSocket);
 
+    NativeSocketTypes::SocketType m_sock;
     bool m_isBlocking;
     bool m_isListening{false};
     mutable std::mutex m_mutex;

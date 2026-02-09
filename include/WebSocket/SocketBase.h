@@ -9,18 +9,22 @@ namespace nob {
 class SocketImpl;
 class Result;
 
+// Forward declaration of detail namespace from OS.h
+namespace detail {
+    #ifdef _WIN32
+    using OpaqueSocketType = void*;
+    static constexpr OpaqueSocketType OPAQUE_INVALID_SOCKET = nullptr;
+    #else
+    using OpaqueSocketType = int;
+    static constexpr OpaqueSocketType OPAQUE_INVALID_SOCKET = -1;
+    #endif
+}
+
 // Platform-specific types - exposed for inheritance (but headers still hidden)
-#ifdef _WIN32
 struct NativeSocketTypes {
-    using SocketType = void*;  // Opaque pointer type
-    static constexpr void* INVALID_SOCKET = nullptr;
+    using SocketType = detail::OpaqueSocketType;  // Opaque type for header
+    static constexpr SocketType INVALID_SOCKET = detail::OPAQUE_INVALID_SOCKET;
 };
-#else
-struct NativeSocketTypes {
-    using SocketType = int;
-    static constexpr int INVALID_SOCKET = -1;
-};
-#endif
 
 /**
  * @brief SocketBase - Compiler firewall class that shields users from native socket headers

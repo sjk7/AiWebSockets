@@ -1,20 +1,8 @@
 #include "WebSocket/SocketBase.h"
 #include "WebSocket/ErrorCodes.h"
+#include "WebSocket/OS.h"
 
-// Native socket headers - ONLY in this implementation file
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <mswsock.h>
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <sys/epoll.h>
-#endif
+// All native socket headers are now included in OS.h
 
 namespace nob {
 

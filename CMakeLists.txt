@@ -107,6 +107,7 @@ set(WEBSOCKET_HEADERS
     include/WebSocket/TestUtilities.h
     include/WebSocket/Types.h
     include/WebSocket/AddrInfoGuard.h
+    include/WebSocket/OS.h
 )
 
 # Create library

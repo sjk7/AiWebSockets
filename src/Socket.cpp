@@ -1,6 +1,7 @@
 #include "WebSocket/Socket.h"
 #include "WebSocket/AddrInfoGuard.h"
 #include "WebSocket/ErrorCodes.h"
+#include "WebSocket/OS.h"
 #include <string>
 #include <cstring>
 #include <thread>
@@ -24,17 +25,6 @@ Socket::~Socket() {
 
 		// Clean up async I/O resources
 		if (m_asyncEnabled.load()) {
-#ifdef _WIN32
-			if (m_completionPort != nullptr) {
-				CloseHandle(m_completionPort);
-				m_completionPort = nullptr;
-			}
-#else
-			if (m_epollFd != -1) {
-				close(m_epollFd);
-				m_epollFd = -1;
-			}
-#endif
 			m_asyncEnabled.store(false);
 		}
 
@@ -135,17 +125,7 @@ Socket::~Socket() {
 				}
 			}
 			
-			if (::bind(m_socket, (struct sockaddr*)&addr6, sizeof(addr6)) != 0) {
-				updateLastError();
-				int systemErrorCode = getLastSystemErrorCode();
-				std::string systemError = getSystemErrorMessage(systemErrorCode);
-				if (systemError.find("address already in use") != std::string::npos || 
-					systemError.find("Only one usage of each socket address") != std::string::npos) {
-					std::string portError = "Port " + std::to_string(port) + " is already in use. " + systemError;
-					return Result(ErrorCode::socketBindFailed, portError);
-				}
-				return Result(ErrorCode::socketBindFailed, systemErrorCode);
-			}
+			return bindNativeSocket(&addr6, sizeof(addr6));
 		} else {
 			// IPv4 binding (default)
 			struct sockaddr_in addr;
@@ -162,22 +142,8 @@ Socket::~Socket() {
 				}
 			}
 
-			if (::bind(m_socket, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
-				updateLastError();
-				int systemErrorCode = getLastSystemErrorCode();
-				// Provide more specific error message for port in use
-				std::string systemError = getSystemErrorMessage(systemErrorCode);
-				if (systemError.find("address already in use") != std::string::npos || 
-					systemError.find("Only one usage of each socket address") != std::string::npos) {
-					// Custom message for port conflicts - this is cached immediately
-					std::string portError = "Port " + std::to_string(port) + " is already in use. " + systemError;
-					return Result(ErrorCode::socketBindFailed, portError);
-				}
-				return Result(ErrorCode::socketBindFailed, systemErrorCode);
-			}
+			return bindNativeSocket(&addr, sizeof(addr));
 		}
-
-		return Result();
 	}
 
 	Result Socket::listen(int backlog) {
@@ -185,13 +151,11 @@ Socket::~Socket() {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
-		if (::listen(m_socket, backlog) != 0) {
-			updateLastError();
-			return Result(ErrorCode::socketListenFailed, getLastSystemErrorCode());
+		Result result = listenNativeSocket(backlog);
+		if (result.isSuccess()) {
+			m_isListening = true;
 		}
-
-		m_isListening = true;
-		return Result();
+		return result;
 	}
 
 	AcceptResult Socket::accept() {
@@ -200,15 +164,13 @@ Socket::~Socket() {
 		}
 
 		// Use a large enough buffer for both IPv4 and IPv6 addresses
-		struct sockaddr_storage clientAddr;
+		sockaddr_storage clientAddr;
 		socklen_t clientAddrLen = sizeof(clientAddr);
 		std::memset(&clientAddr, 0, sizeof(clientAddr));
 
-		NativeSocketTypes::SocketType clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
+		NativeSocketTypes::SocketType clientSocket = acceptNativeSocket(&clientAddr, &clientAddrLen);
 		if (clientSocket == NativeSocketTypes::INVALID_SOCKET) {
-			updateLastError();
-			const auto ret = Result(ErrorCode::socketAcceptFailed, getLastSystemErrorCode());
-			return { ret, nullptr };
+			return { Result(ErrorCode::socketAcceptFailed, getLastSystemErrorCode()), nullptr };
 		}
 
 		auto newSocket = createFromNative(clientSocket);
@@ -229,12 +191,7 @@ Socket::~Socket() {
 			return Result(ErrorCode::invalidParameter, "Invalid IPv4 address: " + address);
 		}
 
-		if (::connect(m_socket, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
-			updateLastError();
-			return Result(ErrorCode::socketConnectFailed, getLastSystemErrorCode());
-		}
-
-		return Result();
+		return connectNativeSocket(&addr, sizeof(addr));
 	}
 
 	Result Socket::shutdown() {
@@ -243,9 +200,9 @@ Socket::~Socket() {
 		}
 
 #ifdef _WIN32
-		int result = ::shutdown(m_socket, SD_BOTH);
+		int result = ::shutdown(m_sock, SD_BOTH);
 #else
-		int result = ::shutdown(m_socket, SHUT_RDWR);
+		int result = ::shutdown(m_sock, SHUT_RDWR);
 #endif
 
 		if (result == SOCKET_ERROR) {
@@ -265,12 +222,12 @@ Socket::~Socket() {
 		shutdown();
 
 #ifdef _WIN32
-		int result = closesocket(m_socket);
+		int result = closesocket(m_sock);
 #else
-		int result = close(m_socket);
+		int result = close(m_sock);
 #endif
 
-		m_socket = NativeSocketTypes::INVALID_SOCKET;
+		m_sock = NativeSocketTypes::INVALID_SOCKET;
 
 		// Automatic socket system cleanup - thread-safe with reference counting
 		{
@@ -304,9 +261,9 @@ Socket::~Socket() {
 
 		while (totalSent < length) {
 #ifdef _WIN32
-			int result = ::send(m_socket, buffer + totalSent, (int)(length - totalSent), 0);
+			int result = ::send(m_sock, buffer + totalSent, (int)(length - totalSent), 0);
 #else
-			ssize_t result = ::send(m_socket, buffer + totalSent, length - totalSent, 0);
+			ssize_t result = ::send(m_sock, buffer + totalSent, length - totalSent, 0);
 #endif
 
 			if (result < 0) {
@@ -338,9 +295,9 @@ Socket::~Socket() {
 		}
 
 #ifdef _WIN32
-		int result = recv(m_socket, (char*)buffer, (int)bufferSize, 0);
+		int result = recv(m_sock, (char*)buffer, (int)bufferSize, 0);
 #else
-		ssize_t result = recv(m_socket, buffer, bufferSize, 0);
+		ssize_t result = recv(m_sock, buffer, bufferSize, 0);
 #endif
 
 		if (result < 0) {
@@ -384,7 +341,7 @@ Socket::~Socket() {
 		// Use select() to implement timeout
 		fd_set readfds;
 		FD_ZERO(&readfds);
-		FD_SET(m_socket, &readfds);
+		FD_SET(m_sock, &readfds);
 
 		struct timeval timeout;
 		timeout.tv_sec = timeoutMs / 1000;
@@ -392,9 +349,9 @@ Socket::~Socket() {
 
 		int selectResult = select(
 #ifdef _WIN32
-			m_socket + 1,
+			m_sock + 1,
 #else
-			m_socket + 1,
+			m_sock + 1,
 #endif
 			&readfds, nullptr, nullptr, &timeout);
 
@@ -428,19 +385,19 @@ Socket::~Socket() {
 
 #ifdef _WIN32
 		u_long mode = blocking ? 0 : 1;
-		int result = ioctlsocket(m_socket, FIONBIO, &mode);
+		int result = ioctlsocket(m_sock, FIONBIO, &mode);
 		if (result != 0) {
 			updateLastError();
 			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
 		}
 #else
-		int flags = fcntl(m_socket, F_GETFL, 0);
+		int flags = fcntl(m_sock, F_GETFL, 0);
 		if (flags == -1) {
 			updateLastError();
 			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
 		}
 
-		int result = fcntl(m_socket, F_SETFL, blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK));
+		int result = fcntl(m_sock, F_SETFL, blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK));
 		if (result == -1) {
 			updateLastError();
 			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
@@ -472,7 +429,7 @@ Socket::~Socket() {
 	}
 
 	bool Socket::isValid() const {
-		return m_socket != NativeSocketTypes::INVALID_SOCKET;
+		return m_sock != NativeSocketTypes::INVALID_SOCKET;
 	}
 
 	bool Socket::isBlocking() const {
@@ -487,7 +444,7 @@ Socket::~Socket() {
 		struct sockaddr_in addr;
 		socklen_t addrLen = sizeof(addr);
 
-		if (getsockname(m_socket, (struct sockaddr*)&addr, &addrLen) != 0) {
+		if (getsockname(m_sock, (struct sockaddr*)&addr, &addrLen) != 0) {
 			return "";
 		}
 
@@ -502,7 +459,7 @@ Socket::~Socket() {
 		struct sockaddr_in addr;
 		socklen_t addrLen = sizeof(addr);
 
-		if (getsockname(m_socket, (struct sockaddr*)&addr, &addrLen) != 0) {
+		if (getsockname(m_sock, (struct sockaddr*)&addr, &addrLen) != 0) {
 			return 0;
 		}
 
@@ -517,7 +474,7 @@ Socket::~Socket() {
 		struct sockaddr_in addr;
 		socklen_t addrLen = sizeof(addr);
 
-		if (getpeername(m_socket, (struct sockaddr*)&addr, &addrLen) != 0) {
+		if (getpeername(m_sock, (struct sockaddr*)&addr, &addrLen) != 0) {
 			return "";
 		}
 
@@ -532,7 +489,7 @@ Socket::~Socket() {
 		struct sockaddr_in addr;
 		socklen_t addrLen = sizeof(addr);
 
-		if (getpeername(m_socket, (struct sockaddr*)&addr, &addrLen) != 0) {
+		if (getpeername(m_sock, (struct sockaddr*)&addr, &addrLen) != 0) {
 			return 0;
 		}
 
@@ -784,7 +741,7 @@ Socket::~Socket() {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
-		if (setsockopt(m_socket, level, option, (const char*)value, (int)length) != 0) {
+		if (setsockopt(m_sock, level, option, (const char*)value, (int)length) != 0) {
 			updateLastError();
 			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
 		}
@@ -798,7 +755,7 @@ Socket::~Socket() {
 		}
 
 		socklen_t len = (socklen_t)*length;
-		if (getsockopt(m_socket, level, option, (char*)value, &len) != 0) {
+		if (getsockopt(m_sock, level, option, (char*)value, &len) != 0) {
 			// Note: UpdateLastError is not const, so we handle error differently here
 			int systemErrorCode = getLastSystemErrorCode();
 			printf("Socket getsockopt error: %s\n", getSystemErrorMessage(systemErrorCode).c_str());
@@ -844,7 +801,7 @@ Socket::~Socket() {
 		struct sockaddr addr;
 		socklen_t addrLen = sizeof(addr);
 
-		if (getsockname(m_socket, &addr, &addrLen) != 0) {
+		if (getsockname(m_sock, &addr, &addrLen) != 0) {
 			// Use proper Windows error handling
 #ifdef _WIN32
 			int errorCode = WSAGetLastError();
@@ -932,7 +889,7 @@ Socket::~Socket() {
 
 #ifdef _WIN32
 		// Create I/O Completion Port
-		m_completionPort = CreateIoCompletionPort((HANDLE)m_socket, nullptr, (ULONG_PTR)this, 0);
+		m_completionPort = CreateIoCompletionPort((HANDLE)m_sock, nullptr, (ULONG_PTR)this, 0);
 		if (m_completionPort == nullptr) {
 			return Result(ErrorCode::unknownError, "Failed to create completion port");
 		}
@@ -951,9 +908,9 @@ Socket::~Socket() {
 		// Add socket to epoll
 		struct epoll_event event;
 		event.events = EPOLLIN | EPOLLOUT | EPOLLET;
-		event.data.fd = m_socket;
+		event.data.fd = m_sock;
 
-		if (epoll_ctl(m_epollFd, EPOLL_CTL_ADD, m_socket, &event) == -1) {
+		if (epoll_ctl(m_epollFd, EPOLL_CTL_ADD, m_sock, &event) == -1) {
 			close(m_epollFd);
 			m_epollFd = -1;
 			return Result(ErrorCode::unknownError, "Failed to add socket to epoll");
@@ -984,7 +941,7 @@ Socket::~Socket() {
 		wsaBuf.len = (ULONG)data.size();
 
 		DWORD bytesSent = 0;
-		int result = WSASend(m_socket, &wsaBuf, 1, &bytesSent, 0, &m_sendOverlapped, nullptr);
+		int result = WSASend(m_sock, &wsaBuf, 1, &bytesSent, 0, &m_sendOverlapped, nullptr);
 
 		if (result == SOCKET_ERROR) {
 			int error = WSAGetLastError();
@@ -996,7 +953,7 @@ Socket::~Socket() {
 
 #else
 		// Use send with MSG_DONTWAIT for non-blocking async operation
-		ssize_t result = send(m_socket, data.data(), data.size(), MSG_DONTWAIT);
+		ssize_t result = send(m_sock, data.data(), data.size(), MSG_DONTWAIT);
 
 		if (result == -1) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -1033,7 +990,7 @@ Socket::~Socket() {
 
 		DWORD bytesReceived = 0;
 		DWORD flags = 0;
-		int result = WSARecv(m_socket, &wsaBuf, 1, &bytesReceived, &flags, &m_recvOverlapped, nullptr);
+		int result = WSARecv(m_sock, &wsaBuf, 1, &bytesReceived, &flags, &m_recvOverlapped, nullptr);
 
 		if (result == SOCKET_ERROR) {
 			int error = WSAGetLastError();
@@ -1048,7 +1005,7 @@ Socket::~Socket() {
 		std::vector<uint8_t> tempBuffer;
 		tempBuffer.resize(maxLength);
 
-		ssize_t result = recv(m_socket, tempBuffer.data(), maxLength, MSG_DONTWAIT);
+		ssize_t result = recv(m_sock, tempBuffer.data(), maxLength, MSG_DONTWAIT);
 
 		if (result == -1) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -1090,9 +1047,9 @@ Socket::~Socket() {
 		FD_ZERO(&readfds);
 
 #ifdef _WIN32
-		FD_SET(m_socket, &readfds);
+		FD_SET(m_sock, &readfds);
 #else
-		FD_SET(m_socket, &readfds);
+		FD_SET(m_sock, &readfds);
 #endif
 
 		struct timeval timeout;
@@ -1101,9 +1058,9 @@ Socket::~Socket() {
 
 		int selectResult = select(
 #ifdef _WIN32
-			m_socket + 1,
+			m_sock + 1,
 #else
-			m_socket + 1,
+			m_sock + 1,
 #endif
 			& readfds, nullptr, nullptr, &timeout);
 
@@ -1118,7 +1075,7 @@ Socket::~Socket() {
 		}
 
 		// Check if socket is ready for reading
-		if (FD_ISSET(m_socket, &readfds)) {
+		if (FD_ISSET(m_sock, &readfds)) {
 			if (m_isListening) {
 				// This is a listening socket, only handle accept events
 				handleAcceptEvent();
@@ -1141,7 +1098,7 @@ Socket::~Socket() {
 		socklen_t clientAddrLen = sizeof(clientAddr);
 #endif
 
-		NativeSocketTypes::SocketType clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
+		NativeSocketTypes::SocketType clientSocket = ::accept(m_sock, (struct sockaddr*)&clientAddr, &clientAddrLen);
 
 		if (clientSocket != NativeSocketTypes::INVALID_SOCKET) {
 			// Successfully accepted a connection
@@ -1161,7 +1118,7 @@ Socket::~Socket() {
 	void Socket::handleReceiveEvent() {
 		// This is a connected socket, try to receive data
 		char buffer[4096];
-		int result = recv(m_socket, buffer, sizeof(buffer), 0);
+		int result = recv(m_sock, buffer, sizeof(buffer), 0);
 
 		if (result > 0) {
 			// Data received
