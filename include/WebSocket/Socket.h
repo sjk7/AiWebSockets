@@ -58,13 +58,13 @@ public:
     Result close();
 
     // Data transmission - Raw methods
-    SendResult SendRaw(const void* data, size_t length);
-    std::pair<Result, std::vector<uint8_t>> ReceiveRaw(void* buffer, size_t bufferSize);
+    SendResult sendRaw(const void* data, size_t length);
+    std::pair<Result, std::vector<uint8_t>> receiveRaw(void* buffer, size_t bufferSize);
 
     // Data transmission - WebSocket-aware methods
-    Result Send(const std::vector<uint8_t>& data);
-    std::pair<Result, std::vector<uint8_t>> Receive(size_t maxLength);
-    std::pair<Result, std::vector<uint8_t>> Receive(size_t maxLength, int timeoutMs);
+    Result send(const std::vector<uint8_t>& data);
+    std::pair<Result, std::vector<uint8_t>> receive(size_t maxLength);
+    std::pair<Result, std::vector<uint8_t>> receive(size_t maxLength, int timeoutMs);
 
     // Socket options
     Result Blocking(bool blocking);

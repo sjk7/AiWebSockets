@@ -221,7 +221,7 @@ void WebSocketServerLite::HandleClientConnection(std::unique_ptr<Socket> clientS
         const size_t MAX_REQUEST_SIZE = 65536;
         
         while (m_running) {
-            auto receiveResult = clientSocket->Receive(4096);
+            auto receiveResult = clientSocket->receive(4096);
             
             if (receiveResult.first.IsSuccess()) {
                 if (receiveResult.second.empty()) {
@@ -294,7 +294,7 @@ void WebSocketServerLite::HandleClientConnection(std::unique_ptr<Socket> clientS
         // Handle WebSocket messages (non-blocking)
         while (m_running) {
             // Simple frame receive implementation
-            auto receiveResult = clientSocket->Receive(4096);
+            auto receiveResult = clientSocket->receive(4096);
             if (!receiveResult.first.IsSuccess()) {
                 Result error = receiveResult.first;
                 if (error.GetErrorCode() == ERROR_CODE::WEBSOCKET_CONNECTION_CLOSED) {
@@ -411,7 +411,7 @@ void WebSocketServerLite::SendHTTPResponse(Socket& clientSocket, const std::stri
     response << body;
     
     std::string responseStr = response.str();
-    clientSocket.Send(std::vector<uint8_t>(responseStr.begin(), responseStr.end()));
+    clientSocket.send(std::vector<uint8_t>(responseStr.begin(), responseStr.end()));
 }
 
 std::string WebSocketServerLite::GetClientIP(const Socket& socket, const std::string& httpRequest) {

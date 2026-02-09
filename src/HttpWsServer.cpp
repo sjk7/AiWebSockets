@@ -231,7 +231,7 @@ void HttpWsServer::HandleClient(std::unique_ptr<ClientConnection> client) {
     }
     
     // Receive request with short timeout to prevent hanging
-    auto [receiveResult, requestData] = m_clients.back()->socket->Receive(m_securityConfig.maxRequestSize, 1000); // 1 second timeout
+    auto [receiveResult, requestData] = m_clients.back()->socket->receive(m_securityConfig.maxRequestSize, 1000); // 1 second timeout
     if (!receiveResult.IsSuccess() || requestData.empty()) {
         RemoveConnection(clientIP);
         return;
@@ -308,7 +308,7 @@ void HttpWsServer::HandleWebSocketConnection(ClientConnection* client, const std
     
     // Send handshake response
     std::string handshakeResponse = WebSocketProtocol::GenerateHandshakeResponse(info);
-    auto sendResult = client->socket->Send(std::vector<uint8_t>(handshakeResponse.begin(), handshakeResponse.end()));
+    auto sendResult = client->socket->send(std::vector<uint8_t>(handshakeResponse.begin(), handshakeResponse.end()));
     if (!sendResult.IsSuccess()) {
         if (m_onError) m_onError("Failed to send WebSocket handshake: " + sendResult.GetErrorMessage());
         return;
@@ -316,7 +316,7 @@ void HttpWsServer::HandleWebSocketConnection(ClientConnection* client, const std
     
     // Handle WebSocket messages
     while (!m_shouldStop && client->socket && client->socket->Valid()) {
-        auto [msgResult, msgData] = client->socket->Receive(m_securityConfig.maxMessageSize);
+        auto [msgResult, msgData] = client->socket->receive(m_securityConfig.maxMessageSize);
         if (!msgResult.IsSuccess() || msgData.empty()) {
             break;
         }
@@ -356,7 +356,7 @@ void HttpWsServer::HandleWebSocketConnection(ClientConnection* client, const std
                         // Send response
                         WebSocketFrame responseFrame = WebSocketProtocol::CreateTextFrame(response);
                         std::vector<uint8_t> responseData = WebSocketProtocol::GenerateFrame(responseFrame);
-                        client->socket->Send(responseData);
+                        client->socket->send(responseData);
                     }
                 } catch (const std::exception& e) {
                     if (m_onError) m_onError("WebSocket message handler error: " + std::string(e.what()));
@@ -407,7 +407,7 @@ void HttpWsServer::SendHTTPResponseSync(ClientConnection* client, const std::str
     response.insert(response.end(), body.begin(), body.end());
     
     // Send synchronously - blocking fallback
-    client->socket->Send(response);
+    client->socket->send(response);
     
     // For HTTP connections, close after sending response
     // Socket::Close() handles proper shutdown internally

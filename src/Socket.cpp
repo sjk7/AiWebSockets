@@ -320,7 +320,7 @@ namespace WebSocket {
 		return Result();
 	}
 
-	SendResult Socket::SendRaw(const void* data, size_t length) {
+	SendResult Socket::sendRaw(const void* data, size_t length) {
 		if (!Valid()) {
 			return { Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created"), 0 };
 		}
@@ -334,9 +334,9 @@ namespace WebSocket {
 
 		while (totalSent < length) {
 #ifdef _WIN32
-			int result = send(m_socket, buffer + totalSent, (int)(length - totalSent), 0);
+			int result = ::send(m_socket, buffer + totalSent, (int)(length - totalSent), 0);
 #else
-			ssize_t result = send(m_socket, buffer + totalSent, length - totalSent, 0);
+			ssize_t result = ::send(m_socket, buffer + totalSent, length - totalSent, 0);
 #endif
 
 			if (result < 0) {
@@ -358,7 +358,7 @@ namespace WebSocket {
 		return { Result(), totalSent };
 	}
 
-	std::pair<Result, std::vector<uint8_t>> Socket::ReceiveRaw(void* buffer, size_t bufferSize) {
+	std::pair<Result, std::vector<uint8_t>> Socket::receiveRaw(void* buffer, size_t bufferSize) {
 		if (!Valid()) {
 			return { Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created"), {} };
 		}
@@ -388,16 +388,16 @@ namespace WebSocket {
 		return { Result(), data };
 	}
 
-	Result Socket::Send(const std::vector<uint8_t>& data) {
-		auto [result, bytesSent] = SendRaw(data.data(), data.size());
+	Result Socket::send(const std::vector<uint8_t>& data) {
+		auto [result, bytesSent] = sendRaw(data.data(), data.size());
 		return result;
 	}
 
-	ReceiveResult Socket::Receive(size_t maxLength) {
+	ReceiveResult Socket::receive(size_t maxLength) {
 		std::vector<uint8_t> buffer;
 		buffer.reserve(maxLength);
 		buffer.resize(maxLength);
-		auto [result, received] = ReceiveRaw(buffer.data(), maxLength);
+		auto [result, received] = receiveRaw(buffer.data(), maxLength);
 
 		if (result.IsError()) {
 			return { result, {} };
@@ -406,7 +406,7 @@ namespace WebSocket {
 		return { result, received };
 	}
 
-	ReceiveResult Socket::Receive(size_t maxLength, int timeoutMs) {
+	ReceiveResult Socket::receive(size_t maxLength, int timeoutMs) {
 		if (!Valid()) {
 			return {Result(ERROR_CODE::INVALID_PARAMETER, "Socket is not valid"), {}};
 		}
@@ -442,7 +442,7 @@ namespace WebSocket {
 		std::vector<uint8_t> buffer;
 		buffer.reserve(maxLength);
 		buffer.resize(maxLength);
-		auto [result, received] = ReceiveRaw(buffer.data(), maxLength);
+		auto [result, received] = receiveRaw(buffer.data(), maxLength);
 
 		if (result.IsError()) {
 			return { result, {} };

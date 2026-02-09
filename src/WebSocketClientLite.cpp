@@ -158,7 +158,7 @@ Result WebSocketClientLite::Disconnect() {
     if (m_socket) {
         // Send close frame
         std::vector<uint8_t> closeFrame = {0x88, 0x00}; // Close frame
-        m_socket->Send(closeFrame);
+        m_socket->send(closeFrame);
         
         m_socket->close();
         m_socket.reset();
@@ -195,7 +195,7 @@ std::pair<Result, std::string> WebSocketClientLite::ReceiveMessage() {
         return {Result(ERROR_CODE::INVALID_PARAMETER, "Not connected"), ""};
     }
     
-    auto receiveResult = m_socket->Receive(4096);
+    auto receiveResult = m_socket->receive(4096);
     if (!receiveResult.first.IsSuccess()) {
         return {receiveResult.first, ""};
     }
@@ -209,7 +209,7 @@ void WebSocketClientLite::ProcessMessages() {
         return;
     }
     
-    auto receiveResult = m_socket->Receive(4096);
+    auto receiveResult = m_socket->receive(4096);
     if (!receiveResult.first.IsSuccess()) {
         Result error = receiveResult.first;
         if (error.GetErrorCode() == ERROR_CODE::WEBSOCKET_CONNECTION_CLOSED) {
@@ -269,13 +269,13 @@ Result WebSocketClientLite::PerformWebSocketHandshake() {
     request << "\r\n";
     
     std::string requestStr = request.str();
-    auto sendResult = m_socket->Send(std::vector<uint8_t>(requestStr.begin(), requestStr.end()));
+    auto sendResult = m_socket->send(std::vector<uint8_t>(requestStr.begin(), requestStr.end()));
     if (!sendResult.IsSuccess()) {
         return sendResult;
     }
     
     // Receive handshake response
-    auto receiveResult = m_socket->Receive(4096);
+    auto receiveResult = m_socket->receive(4096);
     if (!receiveResult.first.IsSuccess()) {
         return receiveResult.first;
     }
@@ -320,7 +320,7 @@ Result WebSocketClientLite::SendWebSocketFrame(const std::vector<uint8_t>& data,
     // Payload
     frame.insert(frame.end(), data.begin(), data.end());
     
-    return m_socket->Send(frame);
+    return m_socket->send(frame);
 }
 
 } // namespace WebSocket
