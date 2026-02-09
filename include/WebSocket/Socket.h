@@ -102,12 +102,18 @@ public:
     static std::string getAddressString(const struct sockaddr* addr);
     static SocketAddress getSocketAddress(const struct sockaddr* addr);
 
+    // Additional async I/O methods (delegated to SocketBase)
+    Result initializeAsyncIO();
+    Result cleanupAsyncIO();
+    Result sendAsync(const void* data, size_t length, size_t* bytesSent);
+    Result receiveAsync(void* buffer, size_t bufferSize, size_t* bytesReceived);
+
 private:
     // Private constructor for internal use (e.g., Accept)
-    explicit Socket(void* nativeSocket);
+    explicit Socket(NativeSocketTypes::SocketType nativeSocket);
 
     // Factory method for creating sockets from native handles
-    static std::unique_ptr<Socket> createFromNative(void* nativeSocket);
+    static std::unique_ptr<Socket> createFromNative(NativeSocketTypes::SocketType nativeSocket);
 
     bool m_isBlocking;
     bool m_isListening{false};

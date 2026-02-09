@@ -433,9 +433,10 @@ Socket::~Socket() {
 		}
 
 		struct sockaddr_in addr;
-		socklen_t addrLen = sizeof(addr);
+		int addrLen = sizeof(addr);
 
-		if (getpeername(m_sock, (struct sockaddr*)&addr, &addrLen) != 0) {
+		Result result = getPeerNameNative(&addr, &addrLen);
+		if (result.isError()) {
 			return 0;
 		}
 
@@ -723,20 +724,11 @@ Socket::~Socket() {
 		}
 
 		struct sockaddr addr;
-		socklen_t addrLen = sizeof(addr);
+		int addrLen = sizeof(addr);
 
-		if (getsockname(m_sock, &addr, &addrLen) != 0) {
-			// Use proper Windows error handling
-#ifdef _WIN32
-			int errorCode = WSAGetLastError();
-			char errorBuffer[256];
-			FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-				nullptr, errorCode, 0, errorBuffer, sizeof(errorBuffer), nullptr);
-			std::string errorMsg = errorBuffer;
-#else
-			std::string errorMsg = strerror(errno);
-#endif
-			return { Result(ErrorCode::socketGetSocknameFailed, errorMsg), {"", 0} };
+		Result result = getSocketNameNative(&addr, &addrLen);
+		if (result.isError()) {
+			return { result, {"", 0} };
 		}
 
 		SocketAddress address = getSocketAddress(&addr);
@@ -799,33 +791,41 @@ Socket::~Socket() {
 	void Socket::errorCallback(ErrorCallbackFn callback) {
 		std::lock_guard<std::mutex> lock(m_eventLoopMutex);
 		m_errorCallback = std::move(callback);
-		wsaBuf.buf = (CHAR*)data.data();
-		wsaBuf.len = (ULONG)data.size();
+	}
 
-		DWORD bytesSent = 0;
-		int result = WSASend(m_sock, &wsaBuf, 1, &bytesSent, 0, &m_sendOverlapped, nullptr);
-
-		if (result == SOCKET_ERROR) {
-			int error = WSAGetLastError();
-			if (error != WSA_IO_PENDING) {
-				return Result(ErrorCode::socketSendFailed, "WSASend failed");
-			}
-			// Operation is pending - will complete asynchronously
+	Result Socket::sendAsync(const std::vector<uint8_t>& data) {
+		if (!m_asyncEnabled.load()) {
+			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
 		}
 
-#else
-		// Use send with MSG_DONTWAIT for non-blocking async operation
-		ssize_t result = send(m_sock, data.data(), data.size(), MSG_DONTWAIT);
-
-		if (result == -1) {
-			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				return Result(ErrorCode::socketSendFailed, "Async send failed");
-			}
-			// Would block - operation will complete asynchronously
+		if (!isValid()) {
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
-#endif
 
-		return Result();
+		if (data.empty()) {
+			return Result(ErrorCode::invalidParameter, "Empty data");
+		}
+
+		size_t bytesSent = 0;
+		Result result = sendAsync(data.data(), data.size(), &bytesSent);
+		return result;
+	}
+
+	Result Socket::sendAsync(const void* data, size_t length) {
+		if (!m_asyncEnabled.load()) {
+			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
+		}
+
+		if (!isValid()) {
+			return Result(ErrorCode::invalidParameter, "Socket not created");
+		}
+
+		if (!data || length == 0) {
+			return Result(ErrorCode::invalidParameter, "Invalid data parameters");
+		}
+
+		size_t bytesSent = 0;
+		return sendAsync(data, length, &bytesSent);
 	}
 
 	Result Socket::receiveAsync(size_t maxLength) {
@@ -841,43 +841,19 @@ Socket::~Socket() {
 			return Result(ErrorCode::invalidParameter, "Invalid max length");
 		}
 
-#ifdef _WIN32
-		// Use WSARecv for async operation
 		std::vector<uint8_t> tempBuffer;
 		tempBuffer.resize(maxLength);
+		size_t bytesReceived = 0;
+		Result result = receiveAsync(tempBuffer.data(), maxLength, &bytesReceived);
 
-		WSABUF wsaBuf;
-		wsaBuf.buf = (CHAR*)tempBuffer.data();
-		wsaBuf.len = (ULONG)maxLength;
-
-		DWORD bytesReceived = 0;
-		DWORD flags = 0;
-		int result = WSARecv(m_sock, &wsaBuf, 1, &bytesReceived, &flags, &m_recvOverlapped, nullptr);
-
-		if (result == SOCKET_ERROR) {
-			int error = WSAGetLastError();
-			if (error != WSA_IO_PENDING) {
-				return Result(ErrorCode::socketReceiveFailed, "WSARecv failed");
+		if (result.isSuccess() && bytesReceived > 0) {
+			tempBuffer.resize(bytesReceived);
+			if (m_receiveCallback) {
+				m_receiveCallback(tempBuffer);
 			}
-			// Operation is pending - will complete asynchronously
 		}
 
-#else
-		// Use recv with MSG_DONTWAIT for non-blocking async operation
-		std::vector<uint8_t> tempBuffer;
-		tempBuffer.resize(maxLength);
-
-		ssize_t result = recv(m_sock, tempBuffer.data(), maxLength, MSG_DONTWAIT);
-
-		if (result == -1) {
-			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				return Result(ErrorCode::socketReceiveFailed, "Async receive failed");
-			}
-			// Would block - operation will complete asynchronously
-		}
-#endif
-
-		return Result();
+		return result;
 	}
 
 	bool Socket::isAsyncEnabled() const {
@@ -904,40 +880,16 @@ Socket::~Socket() {
 			return Result(ErrorCode::invalidParameter, "Socket is not valid");
 		}
 
-		// Use select() to check for socket events
-		fd_set readfds;
-		FD_ZERO(&readfds);
+		// Use selectNativeSocket to check for socket events
+		bool canRead = false, canWrite = false;
+		Result result = selectNativeSocket(10, &canRead, &canWrite);
 
-#ifdef _WIN32
-		FD_SET(m_sock, &readfds);
-#else
-		FD_SET(m_sock, &readfds);
-#endif
-
-		struct timeval timeout;
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 10000; // 10ms timeout
-
-		int selectResult = select(
-#ifdef _WIN32
-			m_sock + 1,
-#else
-			m_sock + 1,
-#endif
-			& readfds, nullptr, nullptr, &timeout);
-
-		if (selectResult < 0) {
-			updateLastError();
-			return Result(ErrorCode::socketReceiveFailed, getLastSystemErrorCode());
-		}
-
-		if (selectResult == 0) {
-			// Timeout, no events
-			return Result();
+		if (result.isError()) {
+			return result;
 		}
 
 		// Check if socket is ready for reading
-		if (FD_ISSET(m_sock, &readfds)) {
+		if (canRead) {
 			if (m_isListening) {
 				// This is a listening socket, only handle accept events
 				handleAcceptEvent();
@@ -954,15 +906,17 @@ Socket::~Socket() {
 	void Socket::handleAcceptEvent() {
 		// Try to accept a connection
 		sockaddr_in clientAddr;
-#ifdef _WIN32
 		int clientAddrLen = sizeof(clientAddr);
+
+		NativeSocketTypes::SocketType clientSocket = acceptNativeSocket(&clientAddr, &clientAddrLen);
+
+		if (clientSocket != 
+#ifdef _WIN32
+			reinterpret_cast<NativeSocketTypes::SocketType>(INVALID_SOCKET)
 #else
-		socklen_t clientAddrLen = sizeof(clientAddr);
+			static_cast<NativeSocketTypes::SocketType>(-1)
 #endif
-
-		NativeSocketTypes::SocketType clientSocket = ::accept(m_sock, (struct sockaddr*)&clientAddr, &clientAddrLen);
-
-		if (clientSocket != INVALID_SOCKET_NATIVE) {
+		) {
 			// Successfully accepted a connection
 			auto newSocket = createFromNative(clientSocket);
 			if (newSocket) {
@@ -980,28 +934,32 @@ Socket::~Socket() {
 	void Socket::handleReceiveEvent() {
 		// This is a connected socket, try to receive data
 		char buffer[4096];
-		int result = recv(m_sock, buffer, sizeof(buffer), 0);
+		size_t bytesReceived = 0;
+		Result result = receiveNativeSocket(buffer, sizeof(buffer), &bytesReceived);
 
-		if (result > 0) {
+		if (result.isSuccess() && bytesReceived > 0) {
 			// Data received
-			std::vector<uint8_t> data(buffer, buffer + result);
+			std::vector<uint8_t> data(buffer, buffer + bytesReceived);
 			if (m_receiveCallback) {
 				m_receiveCallback(data);
 			}
 		}
-		else if (result == 0) {
+		else if (result.isSuccess() && bytesReceived == 0) {
 			// Connection closed
 			if (m_errorCallback) {
 				m_errorCallback(Result(ErrorCode::websocketConnectionClosed, "Connection closed by peer"));
 			}
 		}
 		else {
-			// Error occurred
-			int errorCode = WSAGetLastError();
-			if (errorCode != WSAEWOULDBLOCK) {
-				updateLastError();
+			// Error occurred - check if it's a non-blocking error
+			int systemErrorCode = getLastSystemErrorCode();
+#ifdef _WIN32
+			if (systemErrorCode != WSAEWOULDBLOCK) {
+#else
+			if (systemErrorCode != EAGAIN && systemErrorCode != EWOULDBLOCK) {
+#endif
 				if (m_errorCallback) {
-					m_errorCallback(Result(ErrorCode::socketReceiveFailed, getLastSystemErrorCode()));
+					m_errorCallback(Result(ErrorCode::socketReceiveFailed, systemErrorCode));
 				}
 			}
 		}

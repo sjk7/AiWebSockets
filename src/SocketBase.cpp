@@ -146,11 +146,20 @@ Result SocketBase::listenNativeSocket(int backlog) {
 }
 
 NativeSocketTypes::SocketType SocketBase::acceptNativeSocket(void* addr, int* addrLen) {
-    if (!m_impl || !m_impl->isValid) {
-        return NativeSocketTypes::INVALID_SOCKET;
+    if (!isValid()) {
+#ifdef _WIN32
+        return reinterpret_cast<NativeSocketTypes::SocketType>(INVALID_SOCKET);
+#else
+        return static_cast<NativeSocketTypes::SocketType>(-1);
+#endif
     }
-    
-    auto clientSocket = ::accept(m_impl->socket, static_cast<struct sockaddr*>(addr), addrLen);
+
+#ifdef _WIN32
+    SOCKET clientSocket = ::accept(m_impl->socket, (struct sockaddr*)addr, (socklen_t*)addrLen);
+#else
+    int clientSocket = ::accept(m_impl->socket, (struct sockaddr*)addr, (socklen_t*)addrLen);
+#endif
+
     if (clientSocket == 
 #ifdef _WIN32
         INVALID_SOCKET
@@ -158,14 +167,30 @@ NativeSocketTypes::SocketType SocketBase::acceptNativeSocket(void* addr, int* ad
         -1
 #endif
     ) {
-        return NativeSocketTypes::INVALID_SOCKET;
-    }
-    
 #ifdef _WIN32
-    return reinterpret_cast<NativeSocketTypes::SocketType>(clientSocket);
+        return reinterpret_cast<NativeSocketTypes::SocketType>(INVALID_SOCKET);
 #else
-    return static_cast<NativeSocketTypes::SocketType>(clientSocket);
+        return static_cast<NativeSocketTypes::SocketType>(-1);
 #endif
+    }
+
+    // Create new SocketImpl for the accepted socket
+    auto newImpl = std::make_unique<SocketImpl>();
+    newImpl->socket = clientSocket;
+    newImpl->isValid = true;
+    newImpl->asyncEnabled = m_impl->asyncEnabled;
+    
+    // Copy async I/O state if needed
+    if (m_impl->asyncEnabled) {
+        newImpl->completionPort = m_impl->completionPort;
+        memcpy(&newImpl->sendOverlapped, &m_impl->sendOverlapped, sizeof(m_impl->sendOverlapped));
+        memcpy(&newImpl->recvOverlapped, &m_impl->recvOverlapped, sizeof(m_impl->recvOverlapped));
+    }
+
+    // Replace current impl with new one
+    m_impl = std::move(newImpl);
+    
+    return reinterpret_cast<NativeSocketTypes::SocketType>(clientSocket);
 }
 
 Result SocketBase::connectNativeSocket(const void* addr, int addrLen) {
