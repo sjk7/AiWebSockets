@@ -7,22 +7,6 @@
 #include <chrono>
 #include <algorithm>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#endif
-
 namespace nob {
 
 	// Static member definitions
@@ -30,19 +14,12 @@ namespace nob {
 	std::mutex Socket::s_initMutex;
 
 	Socket::Socket()
-		: m_socket(INVALID_SOCKET_NATIVE)
-		, m_isBlocking(true)
+		: m_isBlocking(true)
 		, m_isListening(false) {
 		puts("Socket created");
 	}
 
-	Socket::Socket(SOCKET_TYPE_NATIVE nativeSocket)
-		: m_socket(nativeSocket)
-		, m_isBlocking(true)
-		, m_isListening(false) {
-	}
-
-	Socket::~Socket() {
+Socket::~Socket() {
 		stopEventLoop();
 
 		// Clean up async I/O resources
@@ -70,11 +47,10 @@ namespace nob {
 	}
 
 	Socket::Socket(Socket&& other) noexcept
-		: m_socket(other.m_socket)
+		: SocketBase(std::move(other))
 		, m_isBlocking(other.m_isBlocking)
 		, m_isListening(other.m_isListening) {
-		// Move constructor - no change to socket count since we're just transferring ownership
-		other.m_socket = INVALID_SOCKET_NATIVE;
+		// Move constructor - SocketBase handles socket transfer
 		other.m_isBlocking = true;
 		other.m_isListening = false;
 	}
@@ -82,10 +58,9 @@ namespace nob {
 	Socket& Socket::operator=(Socket&& other) noexcept {
 		if (this != &other) {
 			close();
-			m_socket = other.m_socket;
+			SocketBase::operator=(std::move(other));
 			m_isBlocking = other.m_isBlocking;
 			m_isListening = other.m_isListening;
-			other.m_socket = INVALID_SOCKET_NATIVE;
 			other.m_isBlocking = true;
 			other.m_isListening = false;
 		}
@@ -134,12 +109,7 @@ namespace nob {
 		int sockType = (type == socketType::TCP) ? SOCK_STREAM : SOCK_DGRAM;
 		int protocol = (type == socketType::TCP) ? IPPROTO_TCP : IPPROTO_UDP;
 
-		m_socket = socket(af, sockType, protocol);
-		if (m_socket == INVALID_SOCKET_NATIVE) {
-			return Result(ErrorCode::socketCreateFailed, getLastSystemErrorCode());
-		}
-
-		return Result();
+		return createNativeSocket(af, sockType, protocol);
 	}
 
 	Result Socket::bind(const std::string& address, uint16_t port) {
@@ -234,8 +204,8 @@ namespace nob {
 		socklen_t clientAddrLen = sizeof(clientAddr);
 		std::memset(&clientAddr, 0, sizeof(clientAddr));
 
-		SOCKET_TYPE_NATIVE clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
-		if (clientSocket == INVALID_SOCKET_NATIVE) {
+		NativeSocketTypes::SocketType clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
+		if (clientSocket == NativeSocketTypes::INVALID_SOCKET) {
 			updateLastError();
 			const auto ret = Result(ErrorCode::socketAcceptFailed, getLastSystemErrorCode());
 			return { ret, nullptr };
@@ -300,7 +270,7 @@ namespace nob {
 		int result = close(m_socket);
 #endif
 
-		m_socket = INVALID_SOCKET_NATIVE;
+		m_socket = NativeSocketTypes::INVALID_SOCKET;
 
 		// Automatic socket system cleanup - thread-safe with reference counting
 		{
@@ -502,7 +472,7 @@ namespace nob {
 	}
 
 	bool Socket::isValid() const {
-		return m_socket != INVALID_SOCKET_NATIVE;
+		return m_socket != NativeSocketTypes::INVALID_SOCKET;
 	}
 
 	bool Socket::isBlocking() const {
@@ -613,14 +583,14 @@ namespace nob {
 		// Determine if this is IPv6 or IPv4
 		bool isIPv6 = isIPv6Address(address);
 		
-		SOCKET_TYPE_NATIVE testSocket;
+		NativeSocketTypes::SocketType testSocket;
 		void* addrPtr;
 		socklen_t addrLen;
 		
 		if (isIPv6 || address == "::") {
 			// IPv6 test
 			testSocket = socket(AF_INET6, SOCK_STREAM, 0);
-			if (testSocket == INVALID_SOCKET_NATIVE) {
+			if (testSocket == NativeSocketTypes::INVALID_SOCKET) {
 				printf("DEBUG: IsPortAvailable - Failed to create IPv6 test socket\n");
 				CleanupSocketSystem();
 				return false;
@@ -651,7 +621,7 @@ namespace nob {
 		} else {
 			// IPv4 test (default)
 			testSocket = socket(AF_INET, SOCK_STREAM, 0);
-			if (testSocket == INVALID_SOCKET_NATIVE) {
+			if (testSocket == NativeSocketTypes::INVALID_SOCKET) {
 				printf("DEBUG: IsPortAvailable - Failed to create IPv4 test socket\n");
 				CleanupSocketSystem();
 				return false;
@@ -1171,9 +1141,9 @@ namespace nob {
 		socklen_t clientAddrLen = sizeof(clientAddr);
 #endif
 
-		SOCKET_TYPE_NATIVE clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
+		NativeSocketTypes::SocketType clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
 
-		if (clientSocket != INVALID_SOCKET_NATIVE) {
+		if (clientSocket != NativeSocketTypes::INVALID_SOCKET) {
 			// Successfully accepted a connection
 			auto newSocket = createFromNative(clientSocket);
 			if (newSocket) {
@@ -1218,7 +1188,7 @@ namespace nob {
 		}
 	}
 
-	std::unique_ptr<Socket> Socket::createFromNative(SOCKET_TYPE_NATIVE nativeSocket) {
+	std::unique_ptr<Socket> Socket::createFromNative(NativeSocketTypes::SocketType nativeSocket) {
 		auto socket = std::unique_ptr<Socket>(new Socket(nativeSocket));
 
 		// This socket was created outside of Create(), so we need to increment the counter

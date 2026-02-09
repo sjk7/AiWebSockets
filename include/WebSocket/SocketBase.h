@@ -5,8 +5,22 @@
 
 namespace nob {
 
-// Forward declarations to hide native socket types
+// Forward declarations
 class SocketImpl;
+class Result;
+
+// Platform-specific types - exposed for inheritance (but headers still hidden)
+#ifdef _WIN32
+struct NativeSocketTypes {
+    using SocketType = void*;  // Opaque pointer type
+    static constexpr void* INVALID_SOCKET = nullptr;
+};
+#else
+struct NativeSocketTypes {
+    using SocketType = int;
+    static constexpr int INVALID_SOCKET = -1;
+};
+#endif
 
 /**
  * @brief SocketBase - Compiler firewall class that shields users from native socket headers
@@ -36,67 +50,80 @@ public:
     /**
      * @brief Move assignment operator
      * @param other Socket to move from
-     * @return Reference to this socket
+     * @return Reference to this Socket
      */
     SocketBase& operator=(SocketBase&& other) noexcept;
 
     /**
-     * @brief Copy constructor (deleted)
-     */
-    SocketBase(const SocketBase&) = delete;
-
-    /**
-     * @brief Copy assignment operator (deleted)
-     */
-    SocketBase& operator=(const SocketBase&) = delete;
-
-    /**
-     * @brief Check if socket is valid/connected
-     * @return true if socket is valid, false otherwise
+     * @brief Check if socket is valid
+     * @return True if socket is valid, false otherwise
      */
     bool isValid() const;
 
+protected:
     /**
-     * @brief Check if socket is in blocking mode
-     * @return true if blocking, false if non-blocking
+     * @brief Get the implementation pointer
+     * @return Pointer to SocketImpl
      */
-    bool isBlocking() const;
+    SocketImpl* getImpl() const;
 
     /**
-     * @brief Get local address
-     * @return Local IP address as string
+     * @brief Get native socket handle
+     * @return Native socket handle
      */
-    std::string localAddress() const;
+    NativeSocketTypes::SocketType getNativeSocket() const;
 
     /**
-     * @brief Get local port
-     * @return Local port number
+     * @brief Set native socket handle
+     * @param nativeSocket Native socket handle
      */
-    uint16_t localPort() const;
+    void setNativeSocket(NativeSocketTypes::SocketType nativeSocket);
 
     /**
-     * @brief Get remote address
-     * @return Remote IP address as string
+     * @brief Create native socket
+     * @param family Address family
+     * @param type Socket type
+     * @param protocol Protocol
+     * @return Result of operation
      */
-    std::string remoteAddress() const;
+    Result createNativeSocket(int family, int type, int protocol);
 
     /**
-     * @brief Get remote port
-     * @return Remote port number
+     * @brief Bind native socket
+     * @param addr Socket address
+     * @param addrLen Address length
+     * @return Result of operation
      */
-    uint16_t remotePort() const;
+    Result bindNativeSocket(const void* addr, int addrLen);
 
     /**
-     * @brief Check if async I/O is enabled
-     * @return true if async I/O is enabled
+     * @brief Listen on native socket
+     * @param backlog Backlog size
+     * @return Result of operation
      */
-    bool isAsyncEnabled() const;
+    Result listenNativeSocket(int backlog);
 
     /**
-     * @brief Check if event loop is running
-     * @return true if event loop is running
+     * @brief Accept connection on native socket
+     * @param addr Client address
+     * @param addrLen Address length
+     * @return Native socket handle
      */
-    bool isEventLoopRunning() const;
+    NativeSocketTypes::SocketType acceptNativeSocket(void* addr, int* addrLen);
+
+    /**
+     * @brief Connect native socket
+     * @param addr Socket address
+     * @param addrLen Address length
+     * @return Result of operation
+     */
+    Result connectNativeSocket(const void* addr, int addrLen);
+
+    /**
+     * @brief Close native socket
+     * @return Result of operation
+     */
+    Result closeNativeSocket();
 
 private:
     // Pimpl pattern - hide all native socket details

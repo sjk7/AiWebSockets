@@ -2,26 +2,13 @@
 
 #include "ErrorCodes.h"
 #include "Types.h"
+#include "SocketBase.h"
 #include <memory>
 #include <string>
 #include <thread>
 #include <mutex>
 #include <atomic>
 #include <functional>
-
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <mswsock.h>
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <sys/epoll.h>
-#endif
 
 namespace nob {
 
@@ -32,15 +19,6 @@ using SocketAddress = std::pair<std::string, uint16_t>;
 using AcceptResult = std::pair<Result, std::unique_ptr<Socket>>;
 using GetAddressResult = std::pair<Result, SocketAddress>;
 
-// Platform-specific types
-#ifdef _WIN32
-using SOCKET_TYPE_NATIVE = SOCKET;
-static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = INVALID_SOCKET;
-#else
-using SOCKET_TYPE_NATIVE = int;
-static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = -1;
-#endif
-
 /**
  * @brief Cross-platform socket wrapper class
  * 
@@ -48,7 +26,7 @@ static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = -1;
  * It handles both IPv4 and IPv6, TCP and UDP sockets.
  * Uses C-style I/O and proper error handling without exceptions.
  */
-class Socket {
+class Socket : public SocketBase {
 public:
     Socket();
     ~Socket();
@@ -122,12 +100,11 @@ public:
 
 private:
     // Private constructor for internal use (e.g., Accept)
-    explicit Socket(SOCKET_TYPE_NATIVE nativeSocket);
+    explicit Socket(void* nativeSocket);
 
     // Factory method for creating sockets from native handles
-    static std::unique_ptr<Socket> createFromNative(SOCKET_TYPE_NATIVE nativeSocket);
+    static std::unique_ptr<Socket> createFromNative(void* nativeSocket);
 
-    SOCKET_TYPE_NATIVE m_socket;
     bool m_isBlocking;
     bool m_isListening{false};
     mutable std::mutex m_mutex;
@@ -147,14 +124,6 @@ private:
     
     // Async I/O members
     std::atomic<bool> m_asyncEnabled{false};
-#ifdef _WIN32
-    WSAOVERLAPPED m_sendOverlapped{};
-    WSAOVERLAPPED m_recvOverlapped{};
-    HANDLE m_completionPort{nullptr};
-#else
-    int m_epollFd{-1};
-    struct epoll_event m_epollEvents[16];
-#endif
     
     // Event loop members
     std::unique_ptr<std::thread> m_eventLoopThread;
@@ -171,9 +140,9 @@ private:
     Result setSocketOption(int level, int option, const void* value, size_t length);
     Result getSocketOption(int level, int option, void* value, size_t* length) const;
     void updateLastError();
-    SocketAddress getSocketAddress(const struct sockaddr* addr) const;
+    SocketAddress getSocketAddress(const void* addr) const;
     GetAddressResult getSocketAddress() const;
-    static std::string getAddressString(const struct sockaddr* addr);
+    static std::string getAddressString(const void* addr);
 };
 
 } // namespace nob

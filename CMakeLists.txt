@@ -90,6 +90,7 @@ include_directories(include)
 # Source files
 set(SOCKET_SOURCES
     src/Socket.cpp
+    src/SocketBase.cpp
     src/WebSocketProtocol.cpp
     src/ErrorCodes.cpp
     src/WebSocketServerLite.cpp
@@ -100,6 +101,7 @@ set(SOCKET_SOURCES
 # Header files
 set(WEBSOCKET_HEADERS
     include/WebSocket/Socket.h
+    include/WebSocket/SocketBase.h
     include/WebSocket/WebSocketProtocol.h
     include/WebSocket/ErrorCodes.h
     include/WebSocket/TestUtilities.h
