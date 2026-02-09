@@ -160,7 +160,6 @@ set(SOCKET_SOURCES
 set(WEBSOCKET_HEADERS
     include/WebSocket/Socket.h
     include/WebSocket/WebSocketProtocol.h
-    include/WebSocket/WebSocketServer.h
     include/WebSocket/ErrorCodes.h
     include/WebSocket/TestUtilities.h
     include/WebSocket/Types.h
@@ -234,10 +233,6 @@ target_link_libraries(websocket_compliance_test aiWebSockets ${PLATFORM_LIBS})
 add_executable(enhanced_handshake_test examples/enhanced_handshake_test.cpp)
 target_link_libraries(enhanced_handshake_test aiWebSockets ${PLATFORM_LIBS})
 
-# HTTP compliance test executable
-add_executable(http_compliance_test examples/http_compliance_test_fixed.cpp)
-target_link_libraries(http_compliance_test aiWebSockets ${PLATFORM_LIBS})
-
 # HTTP quick wins test executable
 add_executable(test_http_quick_wins examples/test_http_quick_wins.cpp)
 target_link_libraries(test_http_quick_wins aiWebSockets ${PLATFORM_LIBS})
@@ -253,10 +248,6 @@ target_link_libraries(security_test aiWebSockets ${PLATFORM_LIBS})
 # Enhanced security test executable
 add_executable(enhanced_security_test examples/enhanced_security_test.cpp)
 target_link_libraries(enhanced_security_test aiWebSockets ${PLATFORM_LIBS})
-
-# Debug security test executable
-add_executable(debug_security_test examples/debug_security_test.cpp)
-target_link_libraries(debug_security_test aiWebSockets ${PLATFORM_LIBS})
 
 # HTTP security test executable
 add_executable(http_security_test examples/http_security_test.cpp)
@@ -303,11 +294,6 @@ set_target_properties(user_agent_test PROPERTIES FOLDER "Tests")
 add_executable(port_checking_test examples/port_checking_test.cpp)
 target_link_libraries(port_checking_test aiWebSockets)
 set_target_properties(port_checking_test PROPERTIES FOLDER "Tests")
-
-# Debug Nmap test
-add_executable(debug_nmap_test examples/debug_nmap_test.cpp)
-target_link_libraries(debug_nmap_test aiWebSockets)
-set_target_properties(debug_nmap_test PROPERTIES FOLDER "Tests")
 
 # Result optimization test
 add_executable(result_optimization_test examples/result_optimization_test.cpp)
@@ -411,7 +397,6 @@ if(MSVC)
     target_compile_options(comprehensive_http_test PRIVATE /WX)
     target_compile_options(security_test PRIVATE /WX)
     target_compile_options(enhanced_security_test PRIVATE /WX)
-    target_compile_options(debug_security_test PRIVATE /WX)
     target_compile_options(http_security_test PRIVATE /WX)
     target_compile_options(user_agent_test PRIVATE /WX)
     
@@ -437,7 +422,6 @@ if(MSVC)
     target_compile_options(comprehensive_http_test PRIVATE /W4)
     target_compile_options(security_test PRIVATE /W4)
     target_compile_options(enhanced_security_test PRIVATE /W4)
-    target_compile_options(debug_security_test PRIVATE /W4)
     target_compile_options(http_security_test PRIVATE /W4)
     target_compile_options(user_agent_test PRIVATE /W4)
 else()
@@ -463,11 +447,9 @@ else()
     target_compile_options(comprehensive_http_test PRIVATE -Werror)
     target_compile_options(security_test PRIVATE -Werror)
     target_compile_options(enhanced_security_test PRIVATE -Werror)
-    target_compile_options(debug_security_test PRIVATE -Werror)
     target_compile_options(http_security_test PRIVATE -Werror)
     target_compile_options(user_agent_test PRIVATE -Werror)
     target_compile_options(port_checking_test PRIVATE -Werror)
-    target_compile_options(debug_nmap_test PRIVATE -Werror)
     target_compile_options(result_optimization_test PRIVATE -Werror)
     
     # Enable comprehensive warnings
@@ -492,11 +474,9 @@ else()
     target_compile_options(comprehensive_http_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(security_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(enhanced_security_test PRIVATE -Wall -Wextra -Wpedantic)
-    target_compile_options(debug_security_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(http_security_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(user_agent_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(port_checking_test PRIVATE -Wall -Wextra -Wpedantic)
-    target_compile_options(debug_nmap_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(result_optimization_test PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
