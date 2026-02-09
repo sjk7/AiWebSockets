@@ -90,7 +90,7 @@ Result WebSocketServerLite::stop() {
         m_serverSocket.reset();
     }
     
-    std::cout << "🛑 WebSocket Server stopped" << std::endl;
+    std::cout << "WebSocket Server stopped" << std::endl;
     return Result();
 }
 
@@ -108,9 +108,9 @@ Result WebSocketServerLite::startNonBlocking() {
     }
     
     m_running = true;
-    std::cout << "🚀 WebSocket Server started on " << m_bindAddress << ":" << m_port << " (non-blocking)" << std::endl;
-    std::cout << "🔒 Security: " << (m_securityEnabled ? "ENABLED" : "DISABLED") << std::endl;
-    std::cout << "📊 Max connections: " << m_maxConnections << " (per IP: " << m_maxConnectionsPerIP << ")" << std::endl;
+    std::cout << "WebSocket Server started on " << m_bindAddress << ":" << m_port << " (non-blocking)" << std::endl;
+    std::cout << "Security: " << (m_securityEnabled ? "ENABLED" : "DISABLED") << std::endl;
+    std::cout << "Max connections: " << m_maxConnections << " (per IP: " << m_maxConnectionsPerIP << ")" << std::endl;
     
     return Result();
 }
@@ -126,7 +126,7 @@ void WebSocketServerLite::processEvents() {
         std::string clientIP = getClientIP(*acceptResult.second); // No HTTP request yet for initial connection
         
         if (m_securityEnabled && !isConnectionAllowed(clientIP)) {
-            std::cout << "🚫 Connection rejected: " << clientIP << " (security limits exceeded)" << std::endl;
+            std::cout << "Connection rejected: " << clientIP << " (security limits exceeded)" << std::endl;
             acceptResult.second->close();
             return;
         }
@@ -168,14 +168,14 @@ Result WebSocketServerLite::initializeServer() {
     // Set socket to non-blocking mode FIRST
     auto blockingResult = m_serverSocket->blocking(false);
     if (!blockingResult.isSuccess()) {
-        std::cout << "⚠️ Warning: Failed to set non-blocking mode: " << blockingResult.getErrorMessage() << std::endl;
+        std::cout << "Warning: Failed to set non-blocking mode: " << blockingResult.getErrorMessage() << std::endl;
         // Continue anyway, but this is a problem
     }
     
     // Set socket options
     auto reuseResult = m_serverSocket->reuseAddress(true);
     if (!reuseResult.isSuccess()) {
-        std::cout << "⚠️ Warning: Failed to set reuse address: " << reuseResult.getErrorMessage() << std::endl;
+        std::cout << "Warning: Failed to set reuse address: " << reuseResult.getErrorMessage() << std::endl;
     }
     
     // Bind to address and port
@@ -192,7 +192,7 @@ Result WebSocketServerLite::initializeServer() {
         return listenResult;
     }
     
-    std::cout << "✅ Server initialized in non-blocking mode" << std::endl;
+    std::cout << "Server initialized in non-blocking mode" << std::endl;
     return Result();
 }
 
@@ -206,10 +206,10 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
     // Set client socket to non-blocking mode
     auto blockingResult = clientSocket->blocking(false);
     if (!blockingResult.isSuccess()) {
-        std::cout << "⚠️ Warning: Failed to set client socket non-blocking: " << blockingResult.getErrorMessage() << std::endl;
+        std::cout << "Warning: Failed to set client socket non-blocking: " << blockingResult.getErrorMessage() << std::endl;
     }
     
-    std::cout << "🔗 Client connected from " << clientIP << " (non-blocking)" << std::endl;
+    std::cout << "Client connected from " << clientIP << " (non-blocking)" << std::endl;
     
     if (m_onConnect) {
         m_onConnect(clientIP);
@@ -236,7 +236,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
                     // Update client IP with HTTP header information (proxy detection)
                     std::string realClientIP = getClientIP(*clientSocket, accumulatedRequest);
                     if (realClientIP != clientIP) {
-                        std::cout << "🔄 Updated client IP: " << clientIP << " -> " << realClientIP << " (proxy detected)" << std::endl;
+                        std::cout << "Updated client IP: " << clientIP << " -> " << realClientIP << " (proxy detected)" << std::endl;
                         clientIP = realClientIP;
                     }
                     break;
@@ -244,7 +244,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
                 
                 // Check size limit
                 if (accumulatedRequest.size() > MAX_REQUEST_SIZE) {
-                    std::cout << "🚫 Request too large from " << clientIP << std::endl;
+                    std::cout << "Request too large from " << clientIP << std::endl;
                     break;
                 }
             } else {
@@ -258,7 +258,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
                     if (systemError != EAGAIN && systemError != EWOULDBLOCK) {
 #endif
                         // Real error occurred
-                        std::cout << "❌ Receive error from " << clientIP << ": " << error.getErrorMessage() << std::endl;
+                        std::cout << "Receive error from " << clientIP << ": " << error.getErrorMessage() << std::endl;
                         break;
                     }
                     // Would block - continue loop
@@ -266,7 +266,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
                     continue;
                 } else {
                     // Other error
-                    std::cout << "❌ Receive error from " << clientIP << ": " << error.getErrorMessage() << std::endl;
+                    std::cout << "Receive error from " << clientIP << ": " << error.getErrorMessage() << std::endl;
                     break;
                 }
             }
@@ -274,7 +274,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
         
         // Validate HTTP request
         if (m_securityEnabled && !isHTTPRequestValid(accumulatedRequest)) {
-            std::cout << "🚫 Invalid HTTP request from " << clientIP << std::endl;
+            std::cout << "Invalid HTTP request from " << clientIP << std::endl;
             sendHTTPResponse(*clientSocket, "400 Bad Request", "text/plain", "Bad Request");
             removeConnection(clientIP);
             return;
@@ -283,13 +283,13 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
         // Perform WebSocket handshake
         auto handshakeResult = performWebSocketHandshake(*clientSocket, accumulatedRequest);
         if (!handshakeResult.isSuccess()) {
-            std::cout << "❌ WebSocket handshake failed: " << handshakeResult.getErrorMessage() << std::endl;
+            std::cout << "WebSocket handshake failed: " << handshakeResult.getErrorMessage() << std::endl;
             sendHTTPResponse(*clientSocket, "400 Bad Request", "text/plain", "WebSocket handshake failed");
             removeConnection(clientIP);
             return;
         }
         
-        std::cout << "✅ WebSocket handshake successful for " << clientIP << std::endl;
+        std::cout << "WebSocket handshake successful for " << clientIP << std::endl;
         
         // Handle WebSocket messages (non-blocking)
         while (m_running) {
@@ -308,7 +308,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
                     if (systemError != EAGAIN && systemError != EWOULDBLOCK) {
 #endif
                         // Real error
-                        std::cout << "❌ WebSocket receive error: " << error.getErrorMessage() << std::endl;
+                        std::cout << "WebSocket receive error: " << error.getErrorMessage() << std::endl;
                         break;
                     }
                     // Would block - continue
@@ -316,7 +316,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
                     continue;
                 } else {
                     // Other error
-                    std::cout << "❌ WebSocket error: " << error.getErrorMessage() << std::endl;
+                    std::cout << "WebSocket error: " << error.getErrorMessage() << std::endl;
                     break;
                 }
             }
@@ -328,10 +328,10 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
         }
         
     } catch (const std::exception& e) {
-        std::cout << "❌ Exception in client handler: " << e.what() << std::endl;
+        std::cout << "Exception in client handler: " << e.what() << std::endl;
     }
     
-    std::cout << "🔌 Client disconnected: " << clientIP << std::endl;
+    std::cout << "Client disconnected: " << clientIP << std::endl;
     
     if (m_onDisconnect) {
         m_onDisconnect(clientIP);
@@ -386,7 +386,7 @@ bool WebSocketServerLite::isHTTPRequestValid(const std::string& request) {
                 userAgentLower.find("nikto") != std::string::npos ||
                 userAgentLower.find("nmap") != std::string::npos ||
                 userAgentLower.find("masscan") != std::string::npos) {
-                std::cout << "🚫 Suspicious User-Agent blocked: " << userAgent << std::endl;
+                std::cout << "Suspicious User-Agent blocked: " << userAgent << std::endl;
                 return false;
             }
         }

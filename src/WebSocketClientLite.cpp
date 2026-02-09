@@ -61,7 +61,7 @@ Result WebSocketClientLite::connect() {
     // Set socket to non-blocking mode BEFORE connecting
     auto blockingResult = m_socket->blocking(false);
     if (!blockingResult.isSuccess()) {
-        std::cout << "⚠️ Warning: Failed to set non-blocking mode: " << blockingResult.getErrorMessage() << std::endl;
+        std::cout << "Warning: Failed to set non-blocking mode: " << blockingResult.getErrorMessage() << std::endl;
     }
     
     // Connect to server (non-blocking)
@@ -82,7 +82,7 @@ Result WebSocketClientLite::connect() {
         }
         
         // For non-blocking connect, we need to wait for the connection to complete
-        std::cout << "🔄 Connecting to server (non-blocking)..." << std::endl;
+        std::cout << "Connecting to server (non-blocking)..." << std::endl;
         
         // Simple polling approach - in production, use select/poll/epoll
         for (int i = 0; i < 100; ++i) { // Wait up to 5 seconds
@@ -93,7 +93,7 @@ Result WebSocketClientLite::connect() {
             auto handshakeResult = performWebSocketHandshake();
             if (handshakeResult.isSuccess()) {
                 m_connected = true;
-                std::cout << "🔗 Connected to WebSocket server at " << m_serverHost << ":" << m_serverPort << " (non-blocking)" << std::endl;
+                std::cout << "Connected to WebSocket server at " << m_serverHost << ":" << m_serverPort << " (non-blocking)" << std::endl;
                 
                 if (m_onConnect) {
                     m_onConnect();
@@ -139,7 +139,7 @@ Result WebSocketClientLite::connect() {
     }
     
     m_connected = true;
-    std::cout << "🔗 Connected to WebSocket server at " << m_serverHost << ":" << m_serverPort << " (non-blocking)" << std::endl;
+    std::cout << "Connected to WebSocket server at " << m_serverHost << ":" << m_serverPort << " (non-blocking)" << std::endl;
     
     if (m_onConnect) {
         m_onConnect();
@@ -164,7 +164,7 @@ Result WebSocketClientLite::disconnect() {
         m_socket.reset();
     }
     
-    std::cout << "🔌 Disconnected from WebSocket server" << std::endl;
+    std::cout << "Disconnected from WebSocket server" << std::endl;
     
     if (m_onDisconnect) {
         m_onDisconnect();
@@ -214,7 +214,7 @@ void WebSocketClientLite::processMessages() {
         Result error = receiveResult.first;
         if (error.getErrorCode() == ErrorCode::websocketConnectionClosed) {
             m_connected = false;
-            std::cout << "🔌 Server closed connection" << std::endl;
+            std::cout << "Server closed connection" << std::endl;
             if (m_onDisconnect) {
                 m_onDisconnect();
             }
@@ -227,7 +227,7 @@ void WebSocketClientLite::processMessages() {
             if (systemError != EAGAIN && systemError != EWOULDBLOCK) {
 #endif
                 // Real error occurred
-                std::cout << "❌ Receive error: " << error.getErrorMessage() << std::endl;
+                std::cout << "Receive error: " << error.getErrorMessage() << std::endl;
                 m_connected = false;
                 if (m_onDisconnect) {
                     m_onDisconnect();
@@ -239,7 +239,7 @@ void WebSocketClientLite::processMessages() {
             // Would block - just return, no message available
         } else {
             // Other error
-            std::cout << "❌ WebSocket error: " << error.getErrorMessage() << std::endl;
+            std::cout << "WebSocket error: " << error.getErrorMessage() << std::endl;
             m_connected = false;
             if (m_onDisconnect) {
                 m_onDisconnect();
