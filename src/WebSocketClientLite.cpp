@@ -50,7 +50,7 @@ Result WebSocketClientLite::connect() {
     // Create socket
     m_socket = std::make_unique<Socket>();
     auto createResult = m_socket->create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
-    if (!createResult.IsSuccess()) {
+    if (!createResult.isSuccess()) {
         m_socket.reset();
         if (m_onError) {
             m_onError(createResult);
@@ -60,15 +60,15 @@ Result WebSocketClientLite::connect() {
     
     // Set socket to non-blocking mode BEFORE connecting
     auto blockingResult = m_socket->blocking(false);
-    if (!blockingResult.IsSuccess()) {
-        std::cout << "⚠️ Warning: Failed to set non-blocking mode: " << blockingResult.GetErrorMessage() << std::endl;
+    if (!blockingResult.isSuccess()) {
+        std::cout << "⚠️ Warning: Failed to set non-blocking mode: " << blockingResult.getErrorMessage() << std::endl;
     }
     
     // Connect to server (non-blocking)
     auto connectResult = m_socket->connect(m_serverHost, m_serverPort);
-    if (!connectResult.IsSuccess()) {
+    if (!connectResult.isSuccess()) {
         // For non-blocking sockets, connect might return "in progress"
-        int systemError = connectResult.GetSystemErrorCode();
+        int systemError = connectResult.getSystemErrorCode();
 #ifdef _WIN32
         if (systemError != WSAEWOULDBLOCK) {
 #else
@@ -91,7 +91,7 @@ Result WebSocketClientLite::connect() {
             // Check if socket is writable (connection completed)
             // For simplicity, we'll just try the handshake
             auto handshakeResult = performWebSocketHandshake();
-            if (handshakeResult.IsSuccess()) {
+            if (handshakeResult.isSuccess()) {
                 m_connected = true;
                 std::cout << "🔗 Connected to WebSocket server at " << m_serverHost << ":" << m_serverPort << " (non-blocking)" << std::endl;
                 
@@ -102,8 +102,8 @@ Result WebSocketClientLite::connect() {
             }
             
             // Check if connection failed
-            if (handshakeResult.GetErrorCode() == ERROR_CODE::SOCKET_RECEIVE_FAILED) {
-                int handshakeSystemError = handshakeResult.GetSystemErrorCode();
+            if (handshakeResult.getErrorCode() == ERROR_CODE::SOCKET_RECEIVE_FAILED) {
+                int handshakeSystemError = handshakeResult.getSystemErrorCode();
 #ifdef _WIN32
                 if (handshakeSystemError != WSAEWOULDBLOCK && handshakeSystemError != WSAECONNREFUSED) {
 #else
@@ -129,7 +129,7 @@ Result WebSocketClientLite::connect() {
     
     // Perform WebSocket handshake
     auto handshakeResult = performWebSocketHandshake();
-    if (!handshakeResult.IsSuccess()) {
+    if (!handshakeResult.isSuccess()) {
         m_socket->close();
         m_socket.reset();
         if (m_onError) {
@@ -196,7 +196,7 @@ std::pair<Result, std::string> WebSocketClientLite::receiveMessage() {
     }
     
     auto receiveResult = m_socket->receive(4096);
-    if (!receiveResult.first.IsSuccess()) {
+    if (!receiveResult.first.isSuccess()) {
         return {receiveResult.first, ""};
     }
     
@@ -210,24 +210,24 @@ void WebSocketClientLite::processMessages() {
     }
     
     auto receiveResult = m_socket->receive(4096);
-    if (!receiveResult.first.IsSuccess()) {
+    if (!receiveResult.first.isSuccess()) {
         Result error = receiveResult.first;
-        if (error.GetErrorCode() == ERROR_CODE::WEBSOCKET_CONNECTION_CLOSED) {
+        if (error.getErrorCode() == ERROR_CODE::WEBSOCKET_CONNECTION_CLOSED) {
             m_connected = false;
             std::cout << "🔌 Server closed connection" << std::endl;
             if (m_onDisconnect) {
                 m_onDisconnect();
             }
-        } else if (error.GetErrorCode() == ERROR_CODE::SOCKET_RECEIVE_FAILED) {
+        } else if (error.getErrorCode() == ERROR_CODE::SOCKET_RECEIVE_FAILED) {
             // Check if it's just a non-blocking "would block" situation
-            int systemError = error.GetSystemErrorCode();
+            int systemError = error.getSystemErrorCode();
 #ifdef _WIN32
             if (systemError != WSAEWOULDBLOCK) {
 #else
             if (systemError != EAGAIN && systemError != EWOULDBLOCK) {
 #endif
                 // Real error occurred
-                std::cout << "❌ Receive error: " << error.GetErrorMessage() << std::endl;
+                std::cout << "❌ Receive error: " << error.getErrorMessage() << std::endl;
                 m_connected = false;
                 if (m_onDisconnect) {
                     m_onDisconnect();
@@ -239,7 +239,7 @@ void WebSocketClientLite::processMessages() {
             // Would block - just return, no message available
         } else {
             // Other error
-            std::cout << "❌ WebSocket error: " << error.GetErrorMessage() << std::endl;
+            std::cout << "❌ WebSocket error: " << error.getErrorMessage() << std::endl;
             m_connected = false;
             if (m_onDisconnect) {
                 m_onDisconnect();
@@ -270,13 +270,13 @@ Result WebSocketClientLite::performWebSocketHandshake() {
     
     std::string requestStr = request.str();
     auto sendResult = m_socket->send(std::vector<uint8_t>(requestStr.begin(), requestStr.end()));
-    if (!sendResult.IsSuccess()) {
+    if (!sendResult.isSuccess()) {
         return sendResult;
     }
     
     // Receive handshake response
     auto receiveResult = m_socket->receive(4096);
-    if (!receiveResult.first.IsSuccess()) {
+    if (!receiveResult.first.isSuccess()) {
         return receiveResult.first;
     }
     

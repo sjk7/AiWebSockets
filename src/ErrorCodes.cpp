@@ -10,7 +10,7 @@
 
 namespace WebSocket {
 
-const char* GetErrorCodeString(ERROR_CODE code) {
+const char* getErrorCodeString(ERROR_CODE code) {
     switch (code) {
         case ERROR_CODE::SUCCESS:
             return "Success";
@@ -57,7 +57,7 @@ const char* GetErrorCodeString(ERROR_CODE code) {
 }
 
 // Optimized version - returns just the error code number
-int GetLastSystemErrorCode() {
+int getLastSystemErrorCode() {
 #ifdef _WIN32
     return WSAGetLastError();
 #else
@@ -66,7 +66,7 @@ int GetLastSystemErrorCode() {
 }
 
 // Full string version - use sparingly for logging
-std::string GetSystemErrorMessage(int errorCode) {
+std::string getSystemErrorMessage(int errorCode) {
     if (errorCode == 0) {
         return "";
     }
@@ -100,16 +100,16 @@ std::string GetSystemErrorMessage(int errorCode) {
 
 // Legacy function for backward compatibility - now uses optimized version
 std::string GetLastSystemError() {
-    return GetSystemErrorMessage(GetLastSystemErrorCode());
+    return getSystemErrorMessage(getLastSystemErrorCode());
 }
 
 // Result class implementation
-std::string Result::GenerateErrorMessage() const {
-    std::string result = GetErrorCodeString(m_errorCode);
+std::string Result::generateErrorMessage() const {
+    std::string result = getErrorCodeString(m_errorCode);
     
     // If we have a system error code, append the system error message
     if (m_systemErrorCode != 0) {
-        std::string systemError = GetSystemErrorMessage(m_systemErrorCode);
+        std::string systemError = getSystemErrorMessage(m_systemErrorCode);
         if (!systemError.empty()) {
             result += ": " + systemError;
         } else {

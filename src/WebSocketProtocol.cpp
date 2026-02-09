@@ -20,7 +20,7 @@ namespace WebSocket {
 static const char BASE64_CHARS[] = 
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-std::string WebSocketProtocol::Base64Encode(const std::vector<uint8_t>& data) {
+std::string WebSocketProtocol::base64Encode(const std::vector<uint8_t>& data) {
     std::string result;
     int val = 0, valb = -6;
     for (uint8_t c : data) {
@@ -40,7 +40,7 @@ std::string WebSocketProtocol::Base64Encode(const std::vector<uint8_t>& data) {
     return result;
 }
 
-std::vector<uint8_t> WebSocketProtocol::Base64Decode(const std::string& input) {
+std::vector<uint8_t> WebSocketProtocol::base64Decode(const std::string& input) {
     std::vector<uint8_t> result;
     int val = 0, valb = -8;
     for (char c : input) {
@@ -57,7 +57,7 @@ std::vector<uint8_t> WebSocketProtocol::Base64Decode(const std::string& input) {
     return result;
 }
 
-std::string WebSocketProtocol::SHA1Hash(const std::string& input) {
+std::string WebSocketProtocol::sha1Hash(const std::string& input) {
 #ifdef _WIN32
     HCRYPTPROV hProv = 0;
     HCRYPTHASH hHash = 0;
@@ -100,7 +100,7 @@ std::string WebSocketProtocol::SHA1Hash(const std::string& input) {
 #endif
 }
 
-Result WebSocketProtocol::ValidateHandshakeRequest(const std::string& request, HandshakeInfo& info) {
+Result WebSocketProtocol::validateHandshakeRequest(const std::string& request, HandshakeInfo& info) {
     // Parse request line
     size_t lineEnd = request.find("\r\n");
     if (lineEnd == std::string::npos) {
@@ -238,8 +238,8 @@ Result WebSocketProtocol::ValidateHandshakeRequest(const std::string& request, H
     return Result();
 }
 
-std::string WebSocketProtocol::GenerateHandshakeResponse(const HandshakeInfo& info) {
-    std::string acceptKey = GenerateWebSocketKey(info.Key);
+std::string WebSocketProtocol::generateHandshakeResponse(const HandshakeInfo& info) {
+    std::string acceptKey = generateWebSocketKey(info.Key);
     
     std::ostringstream response;
     response << "HTTP/1.1 101 Switching Protocols\r\n";
@@ -263,13 +263,13 @@ std::string WebSocketProtocol::GenerateHandshakeResponse(const HandshakeInfo& in
     return response.str();
 }
 
-std::string WebSocketProtocol::GenerateWebSocketKey(const std::string& clientKey) {
+std::string WebSocketProtocol::generateWebSocketKey(const std::string& clientKey) {
     std::string magicString = clientKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-    std::string hash = SHA1Hash(magicString);
-    return Base64Encode(std::vector<uint8_t>(hash.begin(), hash.end()));
+    std::string hash = sha1Hash(magicString);
+    return base64Encode(std::vector<uint8_t>(hash.begin(), hash.end()));
 }
 
-std::string WebSocketProtocol::NegotiateSubProtocol(const std::vector<std::string>& clientProtocols, 
+std::string WebSocketProtocol::negotiateSubProtocol(const std::vector<std::string>& clientProtocols, 
                                                    const std::vector<std::string>& serverProtocols) {
     // Find the first protocol that both client and server support
     // RFC 6455: Use the first protocol in the client's list that the server also supports
@@ -283,7 +283,7 @@ std::string WebSocketProtocol::NegotiateSubProtocol(const std::vector<std::strin
     return ""; // No common protocol found
 }
 
-Result WebSocketProtocol::ParseFrame(const std::vector<uint8_t>& data, WebSocketFrame& frame, size_t& bytesConsumed) {
+Result WebSocketProtocol::parseFrame(const std::vector<uint8_t>& data, WebSocketFrame& frame, size_t& bytesConsumed) {
     if (data.size() < 2) {
         return Result(ERROR_CODE::WEBSOCKET_FRAME_PARSE_FAILED, "Frame too short");
     }
@@ -350,7 +350,7 @@ Result WebSocketProtocol::ParseFrame(const std::vector<uint8_t>& data, WebSocket
     return Result();
 }
 
-std::vector<uint8_t> WebSocketProtocol::GenerateFrame(const WebSocketFrame& frame) {
+std::vector<uint8_t> WebSocketProtocol::generateFrame(const WebSocketFrame& frame) {
     std::vector<uint8_t> result;
     
     // First byte
@@ -401,7 +401,7 @@ std::vector<uint8_t> WebSocketProtocol::GenerateFrame(const WebSocketFrame& fram
     return result;
 }
 
-WebSocketFrame WebSocketProtocol::CreateTextFrame(const std::string& text, bool fin) {
+WebSocketFrame WebSocketProtocol::createTextFrame(const std::string& text, bool fin) {
     WebSocketFrame frame;
     frame.Fin = fin;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
@@ -412,7 +412,7 @@ WebSocketFrame WebSocketProtocol::CreateTextFrame(const std::string& text, bool 
     return frame;
 }
 
-WebSocketFrame WebSocketProtocol::CreateBinaryFrame(const std::vector<uint8_t>& data, bool fin) {
+WebSocketFrame WebSocketProtocol::createBinaryFrame(const std::vector<uint8_t>& data, bool fin) {
     WebSocketFrame frame;
     frame.Fin = fin;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
@@ -423,7 +423,7 @@ WebSocketFrame WebSocketProtocol::CreateBinaryFrame(const std::vector<uint8_t>& 
     return frame;
 }
 
-WebSocketFrame WebSocketProtocol::CreatePingFrame(const std::vector<uint8_t>& data) {
+WebSocketFrame WebSocketProtocol::createPingFrame(const std::vector<uint8_t>& data) {
     WebSocketFrame frame;
     frame.Fin = true;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
@@ -434,7 +434,7 @@ WebSocketFrame WebSocketProtocol::CreatePingFrame(const std::vector<uint8_t>& da
     return frame;
 }
 
-WebSocketFrame WebSocketProtocol::CreatePongFrame(const std::vector<uint8_t>& data) {
+WebSocketFrame WebSocketProtocol::createPongFrame(const std::vector<uint8_t>& data) {
     WebSocketFrame frame;
     frame.Fin = true;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
@@ -445,7 +445,7 @@ WebSocketFrame WebSocketProtocol::CreatePongFrame(const std::vector<uint8_t>& da
     return frame;
 }
 
-WebSocketFrame WebSocketProtocol::CreateCloseFrame(uint16_t code, const std::string& reason) {
+WebSocketFrame WebSocketProtocol::createCloseFrame(uint16_t code, const std::string& reason) {
     WebSocketFrame frame;
     frame.Fin = true;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
@@ -460,7 +460,7 @@ WebSocketFrame WebSocketProtocol::CreateCloseFrame(uint16_t code, const std::str
     return frame;
 }
 
-bool WebSocketProtocol::IsValidOpcode(WEBSOCKET_OPCODE opcode) {
+bool WebSocketProtocol::isValidOpcode(WEBSOCKET_OPCODE opcode) {
     switch (opcode) {
         case WEBSOCKET_OPCODE::CONTINUATION:
         case WEBSOCKET_OPCODE::TEXT:
@@ -474,7 +474,7 @@ bool WebSocketProtocol::IsValidOpcode(WEBSOCKET_OPCODE opcode) {
     }
 }
 
-bool WebSocketProtocol::IsValidUTF8(const std::vector<uint8_t>& data) {
+bool WebSocketProtocol::isValidUTF8(const std::vector<uint8_t>& data) {
     // Simplified UTF-8 validation
     // In a full implementation, this would be more thorough
     for (size_t i = 0; i < data.size(); ) {

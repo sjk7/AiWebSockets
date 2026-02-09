@@ -68,8 +68,8 @@ Result HttpWsServer::start() {
     // Create server socket
     m_serverSocket = std::make_unique<Socket>();
     auto createResult = m_serverSocket->create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
-    if (!createResult.IsSuccess()) {
-        if (m_onError) m_onError("Failed to create server socket: " + createResult.GetErrorMessage());
+    if (!createResult.isSuccess()) {
+        if (m_onError) m_onError("Failed to create server socket: " + createResult.getErrorMessage());
         return createResult;
     }
     
@@ -78,15 +78,15 @@ Result HttpWsServer::start() {
     
     // Bind to address
     auto bindResult = m_serverSocket->bind(m_bindAddress, m_port);
-    if (!bindResult.IsSuccess()) {
-        if (m_onError) m_onError("Failed to bind server socket: " + bindResult.GetErrorMessage());
+    if (!bindResult.isSuccess()) {
+        if (m_onError) m_onError("Failed to bind server socket: " + bindResult.getErrorMessage());
         return bindResult;
     }
     
     // Start listening
     auto listenResult = m_serverSocket->listen(128);
-    if (!listenResult.IsSuccess()) {
-        if (m_onError) m_onError("Failed to listen on server socket: " + listenResult.GetErrorMessage());
+    if (!listenResult.isSuccess()) {
+        if (m_onError) m_onError("Failed to listen on server socket: " + listenResult.getErrorMessage());
         return listenResult;
     }
     
@@ -176,16 +176,16 @@ void HttpWsServer::serverLoop() {
     while (!m_shouldStop) {
         // Accept new connection
         auto [acceptResult, clientSocket] = m_serverSocket->accept();
-        if (!acceptResult.IsSuccess() || !clientSocket) {
+        if (!acceptResult.isSuccess() || !clientSocket) {
             if (m_shouldStop) break;
             continue;
         }
         
         // Enable async I/O for better performance
         auto asyncResult = clientSocket->enableAsyncIO();
-        if (!asyncResult.IsSuccess()) {
+        if (!asyncResult.isSuccess()) {
             // Log warning but continue with sync mode
-            if (m_onError) m_onError("Failed to enable async I/O: " + asyncResult.GetErrorMessage());
+            if (m_onError) m_onError("Failed to enable async I/O: " + asyncResult.getErrorMessage());
         }
         
         std::string clientIP = getClientIP(*clientSocket);
@@ -232,7 +232,7 @@ void HttpWsServer::handleClient(std::unique_ptr<ClientConnection> client) {
     
     // Receive request with short timeout to prevent hanging
     auto [receiveResult, requestData] = m_clients.back()->socket->receive(m_protectionConfig.maxRequestSize, 1000); // 1 second timeout
-    if (!receiveResult.IsSuccess() || requestData.empty()) {
+    if (!receiveResult.isSuccess() || requestData.empty()) {
         removeConnection(clientIP);
         return;
     }
@@ -296,9 +296,9 @@ void HttpWsServer::handleWebSocketConnection(ClientConnection* client, const std
     
     // Perform WebSocket handshake
     HandshakeInfo info;
-    auto handshakeResult = WebSocketProtocol::ValidateHandshakeRequest(request, info);
+    auto handshakeResult = WebSocketProtocol::validateHandshakeRequest(request, info);
     
-    if (!handshakeResult.IsSuccess()) {
+    if (!handshakeResult.isSuccess()) {
         sendHTTPResponse(client, "400 Bad Request", "text/plain", "Invalid WebSocket handshake");
         if (m_onProtectionViolation) {
             m_onProtectionViolation(client->clientIP, "Invalid WebSocket handshake");
@@ -307,17 +307,17 @@ void HttpWsServer::handleWebSocketConnection(ClientConnection* client, const std
     }
     
     // Send handshake response
-    std::string handshakeResponse = WebSocketProtocol::GenerateHandshakeResponse(info);
+    std::string handshakeResponse = WebSocketProtocol::generateHandshakeResponse(info);
     auto sendResult = client->socket->send(std::vector<uint8_t>(handshakeResponse.begin(), handshakeResponse.end()));
-    if (!sendResult.IsSuccess()) {
-        if (m_onError) m_onError("Failed to send WebSocket handshake: " + sendResult.GetErrorMessage());
+    if (!sendResult.isSuccess()) {
+        if (m_onError) m_onError("Failed to send WebSocket handshake: " + sendResult.getErrorMessage());
         return;
     }
     
     // Handle WebSocket messages
     while (!m_shouldStop && client->socket && client->socket->valid()) {
         auto [msgResult, msgData] = client->socket->receive(m_protectionConfig.maxMessageSize);
-        if (!msgResult.IsSuccess() || msgData.empty()) {
+        if (!msgResult.isSuccess() || msgData.empty()) {
             break;
         }
         
@@ -327,9 +327,9 @@ void HttpWsServer::handleWebSocketConnection(ClientConnection* client, const std
         // Parse WebSocket frame
         WebSocketFrame frame;
         size_t bytesConsumed = 0;
-        auto parseResult = WebSocketProtocol::ParseFrame(msgData, frame, bytesConsumed);
+        auto parseResult = WebSocketProtocol::parseFrame(msgData, frame, bytesConsumed);
         
-        if (!parseResult.IsSuccess()) {
+        if (!parseResult.isSuccess()) {
             continue;
         }
         
@@ -354,8 +354,8 @@ void HttpWsServer::handleWebSocketConnection(ClientConnection* client, const std
                     
                     if (!response.empty()) {
                         // Send response
-                        WebSocketFrame responseFrame = WebSocketProtocol::CreateTextFrame(response);
-                        std::vector<uint8_t> responseData = WebSocketProtocol::GenerateFrame(responseFrame);
+                        WebSocketFrame responseFrame = WebSocketProtocol::createTextFrame(response);
+                        std::vector<uint8_t> responseData = WebSocketProtocol::generateFrame(responseFrame);
                         client->socket->send(responseData);
                     }
                 } catch (const std::exception& e) {
@@ -421,7 +421,7 @@ void HttpWsServer::sendHTTPResponse(ClientConnection* client, const std::string&
     // Enable async I/O for better performance
     if (!client->socket->isAsyncEnabled()) {
         auto asyncResult = client->socket->enableAsyncIO();
-        if (!asyncResult.IsSuccess()) {
+        if (!asyncResult.isSuccess()) {
             // Fallback to sync if async fails
             sendHTTPResponseSync(client, status, contentType, body);
             return;
@@ -464,7 +464,7 @@ void HttpWsServer::sendHTTPResponse(ClientConnection* client, const std::string&
     
     // Send asynchronously - non-blocking
     auto sendResult = client->socket->sendAsync(response);
-    if (!sendResult.IsSuccess()) {
+    if (!sendResult.isSuccess()) {
         // Fallback to sync if async send fails
         sendHTTPResponseSync(client, status, contentType, body);
         return;

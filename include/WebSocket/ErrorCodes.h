@@ -63,36 +63,36 @@ public:
     }
     
     // Accessors
-    ERROR_CODE GetErrorCode() const { return m_errorCode; }
-    int GetSystemErrorCode() const { return m_systemErrorCode; }
+    ERROR_CODE getErrorCode() const { return m_errorCode; }
+    int getSystemErrorCode() const { return m_systemErrorCode; }
     
     // Lazy error message generation - only converts when accessed
-    const std::string& GetErrorMessage() const {
+    const std::string& getErrorMessage() const {
         if (!m_messageCached) {
-            m_cachedErrorMessage = GenerateErrorMessage();
+            m_cachedErrorMessage = generateErrorMessage();
             m_messageCached = true;
         }
         return m_cachedErrorMessage;
     }
     
     // Backward compatibility
-    bool IsSuccess() const { return m_errorCode == ERROR_CODE::SUCCESS; }
-    bool IsError() const { return m_errorCode != ERROR_CODE::SUCCESS; }
+    bool isSuccess() const { return m_errorCode == ERROR_CODE::SUCCESS; }
+    bool isError() const { return m_errorCode != ERROR_CODE::SUCCESS; }
     
     // Backward compatibility property
-    const std::string& ErrorMessage() const { return GetErrorMessage(); }
+    const std::string& errorMessage() const { return getErrorMessage(); }
 
 private:
-    std::string GenerateErrorMessage() const;
+    std::string generateErrorMessage() const;
 };
 
 // Helper function to get string representation of error codes
-const char* GetErrorCodeString(ERROR_CODE code);
+const char* getErrorCodeString(ERROR_CODE code);
 
 // Platform-specific error message retrieval (optimized - returns error number)
-int GetLastSystemErrorCode();
+int getLastSystemErrorCode();
 
 // Platform-specific error message retrieval (full string - use sparingly)
-std::string GetSystemErrorMessage(int errorCode);
+std::string getSystemErrorMessage(int errorCode);
 
 } // namespace WebSocket

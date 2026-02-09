@@ -123,7 +123,7 @@ namespace WebSocket {
 			if (previousCount == 0) {
 				// First socket - initialize the socket system
 				Result initResult = InitializeSocketSystem();
-				if (initResult.IsError()) {
+				if (initResult.isError()) {
 					s_socketCount.fetch_sub(1);
 					return initResult;
 				}
@@ -136,7 +136,7 @@ namespace WebSocket {
 
 		m_socket = socket(af, sockType, protocol);
 		if (m_socket == INVALID_SOCKET_NATIVE) {
-			return Result(ERROR_CODE::SOCKET_CREATE_FAILED, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::SOCKET_CREATE_FAILED, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -167,8 +167,8 @@ namespace WebSocket {
 			
 			if (::bind(m_socket, (struct sockaddr*)&addr6, sizeof(addr6)) != 0) {
 				updateLastError();
-				int systemErrorCode = GetLastSystemErrorCode();
-				std::string systemError = GetSystemErrorMessage(systemErrorCode);
+				int systemErrorCode = getLastSystemErrorCode();
+				std::string systemError = getSystemErrorMessage(systemErrorCode);
 				if (systemError.find("address already in use") != std::string::npos || 
 					systemError.find("Only one usage of each socket address") != std::string::npos) {
 					std::string portError = "Port " + std::to_string(port) + " is already in use. " + systemError;
@@ -194,9 +194,9 @@ namespace WebSocket {
 
 			if (::bind(m_socket, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
 				updateLastError();
-				int systemErrorCode = GetLastSystemErrorCode();
+				int systemErrorCode = getLastSystemErrorCode();
 				// Provide more specific error message for port in use
-				std::string systemError = GetSystemErrorMessage(systemErrorCode);
+				std::string systemError = getSystemErrorMessage(systemErrorCode);
 				if (systemError.find("address already in use") != std::string::npos || 
 					systemError.find("Only one usage of each socket address") != std::string::npos) {
 					// Custom message for port conflicts - this is cached immediately
@@ -217,7 +217,7 @@ namespace WebSocket {
 
 		if (::listen(m_socket, backlog) != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_LISTEN_FAILED, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::SOCKET_LISTEN_FAILED, getLastSystemErrorCode());
 		}
 
 		m_isListening = true;
@@ -237,7 +237,7 @@ namespace WebSocket {
 		SOCKET_TYPE_NATIVE clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
 		if (clientSocket == INVALID_SOCKET_NATIVE) {
 			updateLastError();
-			const auto ret = Result(ERROR_CODE::SOCKET_ACCEPT_FAILED, GetLastSystemErrorCode());
+			const auto ret = Result(ERROR_CODE::SOCKET_ACCEPT_FAILED, getLastSystemErrorCode());
 			return { ret, nullptr };
 		}
 
@@ -261,7 +261,7 @@ namespace WebSocket {
 
 		if (::connect(m_socket, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_CONNECT_FAILED, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::SOCKET_CONNECT_FAILED, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -280,7 +280,7 @@ namespace WebSocket {
 
 		if (result == SOCKET_ERROR) {
 			updateLastError();
-			return Result(ERROR_CODE::UNKNOWN_ERROR, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::UNKNOWN_ERROR, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -314,7 +314,7 @@ namespace WebSocket {
 
 		if (result != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::UNKNOWN_ERROR, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::UNKNOWN_ERROR, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -341,7 +341,7 @@ namespace WebSocket {
 
 			if (result < 0) {
 				updateLastError();
-				return { Result(ERROR_CODE::SOCKET_SEND_FAILED, GetLastSystemErrorCode()), totalSent };
+				return { Result(ERROR_CODE::SOCKET_SEND_FAILED, getLastSystemErrorCode()), totalSent };
 			}
 
 			// Handle partial sends (result == 0 means connection closed)
@@ -375,7 +375,7 @@ namespace WebSocket {
 
 		if (result < 0) {
 			updateLastError();
-			return { Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, GetLastSystemErrorCode()), {} };
+			return { Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, getLastSystemErrorCode()), {} };
 		}
 
 		// result == 0 means connection closed gracefully
@@ -399,7 +399,7 @@ namespace WebSocket {
 		buffer.resize(maxLength);
 		auto [result, received] = receiveRaw(buffer.data(), maxLength);
 
-		if (result.IsError()) {
+		if (result.isError()) {
 			return { result, {} };
 		}
 
@@ -430,7 +430,7 @@ namespace WebSocket {
 
 		if (selectResult < 0) {
 			updateLastError();
-			return {Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, GetLastSystemErrorCode()), {}};
+			return {Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, getLastSystemErrorCode()), {}};
 		}
 
 		if (selectResult == 0) {
@@ -444,7 +444,7 @@ namespace WebSocket {
 		buffer.resize(maxLength);
 		auto [result, received] = receiveRaw(buffer.data(), maxLength);
 
-		if (result.IsError()) {
+		if (result.isError()) {
 			return { result, {} };
 		}
 
@@ -461,19 +461,19 @@ namespace WebSocket {
 		int result = ioctlsocket(m_socket, FIONBIO, &mode);
 		if (result != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, getLastSystemErrorCode());
 		}
 #else
 		int flags = fcntl(m_socket, F_GETFL, 0);
 		if (flags == -1) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, getLastSystemErrorCode());
 		}
 
 		int result = fcntl(m_socket, F_SETFL, blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK));
 		if (result == -1) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, getLastSystemErrorCode());
 		}
 #endif
 
@@ -605,8 +605,8 @@ namespace WebSocket {
 	bool Socket::isPortAvailable(uint16_t port, const std::string& address) {
 		// Initialize socket system if needed (since this is a static method)
 		Result initResult = InitializeSocketSystem();
-		if (!initResult.IsSuccess()) {
-			printf("DEBUG: IsPortAvailable - Failed to initialize socket system: %s\n", initResult.GetErrorMessage().c_str());
+		if (!initResult.isSuccess()) {
+			printf("DEBUG: IsPortAvailable - Failed to initialize socket system: %s\n", initResult.getErrorMessage().c_str());
 			return false;
 		}
 
@@ -816,7 +816,7 @@ namespace WebSocket {
 
 		if (setsockopt(m_socket, level, option, (const char*)value, (int)length) != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -830,8 +830,8 @@ namespace WebSocket {
 		socklen_t len = (socklen_t)*length;
 		if (getsockopt(m_socket, level, option, (char*)value, &len) != 0) {
 			// Note: UpdateLastError is not const, so we handle error differently here
-			int systemErrorCode = GetLastSystemErrorCode();
-			printf("Socket getsockopt error: %s\n", GetSystemErrorMessage(systemErrorCode).c_str());
+			int systemErrorCode = getLastSystemErrorCode();
+			printf("Socket getsockopt error: %s\n", getSystemErrorMessage(systemErrorCode).c_str());
 			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, systemErrorCode);
 		}
 
@@ -840,10 +840,10 @@ namespace WebSocket {
 	}
 
 	void Socket::updateLastError() {
-		int systemErrorCode = GetLastSystemErrorCode();
+		int systemErrorCode = getLastSystemErrorCode();
 		// Only log actual errors, not expected non-blocking behavior
 		if (systemErrorCode != 0) {
-			std::string systemError = GetSystemErrorMessage(systemErrorCode);
+			std::string systemError = getSystemErrorMessage(systemErrorCode);
 			if (!systemError.empty() && systemError.find("would block") == std::string::npos
 				&& systemError.find("non-blocking") == std::string::npos) {
 				printf("Socket error: %s\n", systemError.c_str());
@@ -1098,7 +1098,7 @@ namespace WebSocket {
 	void Socket::eventLoopFunction() {
 		while (m_eventLoopRunning.load()) {
 			Result result = processSocketEvents();
-			if (!result.IsSuccess()) {
+			if (!result.isSuccess()) {
 				if (m_errorCallback) {
 					m_errorCallback(result);
 				}
@@ -1139,7 +1139,7 @@ namespace WebSocket {
 
 		if (selectResult < 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, GetLastSystemErrorCode());
+			return Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, getLastSystemErrorCode());
 		}
 
 		if (selectResult == 0) {
@@ -1212,7 +1212,7 @@ namespace WebSocket {
 			if (errorCode != WSAEWOULDBLOCK) {
 				updateLastError();
 				if (m_errorCallback) {
-					m_errorCallback(Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, GetLastSystemErrorCode()));
+					m_errorCallback(Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, getLastSystemErrorCode()));
 				}
 			}
 		}
@@ -1228,7 +1228,7 @@ namespace WebSocket {
 			// This shouldn't happen if the system was properly initialized,
 			// but we handle it just in case
 			Result initResult = InitializeSocketSystem();
-			if (initResult.IsError()) {
+			if (initResult.isError()) {
 				s_socketCount.fetch_sub(1);
 				return nullptr;
 			}
