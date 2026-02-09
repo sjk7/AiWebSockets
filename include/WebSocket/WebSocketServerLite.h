@@ -18,6 +18,9 @@ struct ConnectionInfo {
     std::chrono::steady_clock::time_point minuteStart;
 };
 
+// Type aliases for cleaner code
+using ConnectionMap = std::map<std::string, ConnectionInfo>;
+
 class WebSocketServerLite {
 private:
     std::unique_ptr<Socket> m_serverSocket;
@@ -32,7 +35,7 @@ private:
     int m_maxConnectionsPerMinute;
     
     // Connection tracking
-    std::map<std::string, ConnectionInfo> ipConnectionMap;
+    ConnectionMap ipConnectionMap;
     std::atomic<int> currentConnections{0};
     mutable std::mutex ipConnectionMutex;
     
