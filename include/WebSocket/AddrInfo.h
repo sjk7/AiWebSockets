@@ -5,7 +5,7 @@
 namespace nob {
 
 // Forward declarations for firewall compliance
-struct addrinfo;
+struct addrinfo; // Use global namespace addrinfo
 
 /**
  * @brief RAII wrapper for addrinfo structures
@@ -97,16 +97,9 @@ public:
         reference operator*() const noexcept { return *current_; }
         pointer operator->() const noexcept { return current_; }
 
-        iterator& operator++() noexcept {
-            if (current_) current_ = current_->ai_next;
-            return *this;
-        }
-
-        iterator operator++(int) noexcept {
-            iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
+        // Implementation moved to AddrInfo.cpp to maintain firewall
+        iterator& operator++() noexcept;
+        iterator operator++(int) noexcept;
 
         friend bool operator==(const iterator& a, const iterator& b) noexcept {
             return a.current_ == b.current_;

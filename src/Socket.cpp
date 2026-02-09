@@ -593,13 +593,13 @@ Socket::~Socket() {
 			return ipAddresses;
 		}
 		
-		struct addrinfo hints;
+		::addrinfo hints;
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = AF_UNSPEC; // Both IPv4 and IPv6
 		hints.ai_socktype = SOCK_STREAM;
 		
 		// Use RAII wrapper for automatic cleanup
-		AddrInfo addrInfo = GetAddrInfo(hostname, nullptr, &hints);
+		AddrInfo addrInfo = GetAddrInfo(hostname, nullptr, (struct addrinfo*)&hints);
 		if (!addrInfo.isValid()) {
 			WSACleanup();
 			return ipAddresses; // Return empty list on error
@@ -607,8 +607,9 @@ Socket::~Socket() {
 		
 		// Extract all IP addresses using range-based for loop
 		for (const auto& addr : addrInfo) {
-			if (addr.ai_family == AF_INET) {
-				struct sockaddr_in* sockaddr = (struct sockaddr_in*)addr.ai_addr;
+			const ::addrinfo* global_addr = (const ::addrinfo*)&addr;
+			if (global_addr->ai_family == AF_INET) {
+				struct sockaddr_in* sockaddr = (struct sockaddr_in*)global_addr->ai_addr;
 				char buffer[INET_ADDRSTRLEN];
 				if (inet_ntop(AF_INET, &(sockaddr->sin_addr), buffer, INET_ADDRSTRLEN) != nullptr) {
 					std::string ip = buffer;
@@ -619,8 +620,8 @@ Socket::~Socket() {
 					}
 				}
 			}
-			else if (addr.ai_family == AF_INET6) {
-				struct sockaddr_in6* sockaddr = (struct sockaddr_in6*)addr.ai_addr;
+			else if (global_addr->ai_family == AF_INET6) {
+				struct sockaddr_in6* sockaddr = (struct sockaddr_in6*)global_addr->ai_addr;
 				char buffer[INET6_ADDRSTRLEN];
 				if (inet_ntop(AF_INET6, &(sockaddr->sin6_addr), buffer, INET6_ADDRSTRLEN) != nullptr) {
 					std::string ip = buffer;
@@ -811,23 +812,6 @@ Socket::~Socket() {
 		return result;
 	}
 
-	Result Socket::sendAsync(const void* data, size_t length) {
-		if (!m_asyncEnabled.load()) {
-			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
-		}
-
-		if (!isValid()) {
-			return Result(ErrorCode::invalidParameter, "Socket not created");
-		}
-
-		if (!data || length == 0) {
-			return Result(ErrorCode::invalidParameter, "Invalid data parameters");
-		}
-
-		size_t bytesSent = 0;
-		return sendAsync(data, length, &bytesSent);
-	}
-
 	Result Socket::receiveAsync(size_t maxLength) {
 		if (!m_asyncEnabled.load()) {
 			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
@@ -965,7 +949,29 @@ Socket::~Socket() {
 		}
 	}
 
-	std::unique_ptr<Socket> Socket::createFromNative(NativeSocketTypes::SocketType nativeSocket) {
+	Socket::Socket(NativeSocketTypes::SocketType nativeSocket) : SocketBase() {
+	// Set the native socket handle
+	setNativeSocket(nativeSocket);
+	
+	// Initialize state
+	m_isBlocking = true;
+	m_isListening = false;
+	
+	// This socket was created outside of Create(), so we need to increment the counter
+	std::lock_guard<std::mutex> lock(s_initMutex);
+	int previousCount = s_socketCount.fetch_add(1);
+	if (previousCount == 0) {
+		// This shouldn't happen if the system was properly initialized,
+		// but we handle it just in case
+		Result initResult = InitializeSocketSystem();
+		if (initResult.isError()) {
+			s_socketCount.fetch_sub(1);
+			// Note: We can't throw from constructor, so we'll leave it in an invalid state
+		}
+	}
+}
+
+std::unique_ptr<Socket> Socket::createFromNative(NativeSocketTypes::SocketType nativeSocket) {
 		auto socket = std::unique_ptr<Socket>(new Socket(nativeSocket));
 
 		// This socket was created outside of Create(), so we need to increment the counter
@@ -982,6 +988,39 @@ Socket::~Socket() {
 		}
 
 		return socket;
+	}
+
+// Additional async I/O method implementations
+	Result Socket::sendAsync(const void* data, size_t length, size_t* bytesSent) {
+		if (!m_asyncEnabled.load()) {
+			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
+		}
+
+		if (!isValid()) {
+			return Result(ErrorCode::invalidParameter, "Socket not created");
+		}
+
+		if (!data || length == 0 || !bytesSent) {
+			return Result(ErrorCode::invalidParameter, "Invalid parameters");
+		}
+
+		return SocketBase::sendAsync(data, length, bytesSent);
+	}
+
+	Result Socket::receiveAsync(void* buffer, size_t bufferSize, size_t* bytesReceived) {
+		if (!m_asyncEnabled.load()) {
+			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
+		}
+
+		if (!isValid()) {
+			return Result(ErrorCode::invalidParameter, "Socket not created");
+		}
+
+		if (!buffer || bufferSize == 0 || !bytesReceived) {
+			return Result(ErrorCode::invalidParameter, "Invalid parameters");
+		}
+
+		return SocketBase::receiveAsync(buffer, bufferSize, bytesReceived);
 	}
 
 } // namespace nob
