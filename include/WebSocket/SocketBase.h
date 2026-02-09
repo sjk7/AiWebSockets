@@ -120,7 +120,7 @@ protected:
     Result getSocketOptionNative(int level, int option, void* value, size_t* length) const;
     Result getSocketNameNative(void* addr, int* addrLen) const;
     Result getPeerNameNative(void* addr, int* addrLen) const;
-    Result setBlockingNative(bool blocking);
+    Result setBlocking(bool blocking);
     Result selectNativeSocket(int timeoutMs, bool* canRead, bool* canWrite) const;
     
     // Async I/O operations

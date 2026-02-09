@@ -114,7 +114,7 @@ bool HttpClient::connectToHost(const std::string& host, int port) {
     }
     
     // Set timeout using SocketBase
-    Result timeoutResult = setBlockingNative(false);
+    Result timeoutResult = setBlocking(false);
     if (timeoutResult.isError()) {
         return false;
     }
@@ -140,7 +140,7 @@ bool HttpClient::connectToHost(const std::string& host, int port) {
     result = connectNativeSocket(&addr, sizeof(addr));
     if (result.isError()) {
         // Try blocking connect
-        Result blockingResult = setBlockingNative(true);
+        Result blockingResult = setBlocking(true);
         if (blockingResult.isError()) {
             return false;
         }

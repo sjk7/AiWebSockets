@@ -344,7 +344,7 @@ Socket::~Socket() {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
-		Result result = setBlockingNative(blocking);
+		Result result = setBlocking(blocking);
 		if (result.isSuccess()) {
 			m_isBlocking = blocking;
 		}

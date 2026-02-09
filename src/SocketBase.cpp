@@ -342,28 +342,27 @@ Result SocketBase::getPeerNameNative(void* addr, int* addrLen) const {
     return Result();
 }
 
-Result SocketBase::setBlockingNative(bool blocking) {
+Result SocketBase::setBlocking(bool blocking) {
     if (!isValid()) {
         return Result(ErrorCode::invalidParameter, "Socket not created");
     }
 
 #ifdef _WIN32
-    u_long mode = blocking ? 0 : 1;
+    u_long mode = blocking ? 0 : 1; // 0 = blocking, 1 = non-blocking
     int result = ioctlsocket(m_impl->socket, FIONBIO, &mode);
-    if (result != 0) {
-        return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
-    }
 #else
     int flags = fcntl(m_impl->socket, F_GETFL, 0);
     if (flags == -1) {
-        return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
+        return Result(ErrorCode::unknownError, getLastSystemErrorCode());
     }
-
-    int result = fcntl(m_impl->socket, F_SETFL, blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK));
-    if (result == -1) {
-        return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
-    }
+    
+    int newFlags = blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
+    int result = fcntl(m_impl->socket, F_SETFL, newFlags);
 #endif
+
+    if (result == -1) {
+        return Result(ErrorCode::unknownError, getLastSystemErrorCode());
+    }
 
     return Result();
 }
