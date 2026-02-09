@@ -10,10 +10,10 @@ WebSocketClientLite::WebSocketClientLite(const std::string& host, uint16_t port)
 }
 
 WebSocketClientLite::~WebSocketClientLite() {
-    Disconnect();
+    disconnect();
 }
 
-WebSocketClientLite& WebSocketClientLite::SetServer(const std::string& host, uint16_t port) {
+WebSocketClientLite& WebSocketClientLite::setServer(const std::string& host, uint16_t port) {
     if (m_connected) {
         throw std::runtime_error("Cannot change server while connected");
     }
@@ -22,27 +22,27 @@ WebSocketClientLite& WebSocketClientLite::SetServer(const std::string& host, uin
     return *this;
 }
 
-WebSocketClientLite& WebSocketClientLite::OnMessage(const std::function<void(const std::string&)>& callback) {
+WebSocketClientLite& WebSocketClientLite::onMessage(const std::function<void(const std::string&)>& callback) {
     m_onMessage = callback;
     return *this;
 }
 
-WebSocketClientLite& WebSocketClientLite::OnConnect(const std::function<void()>& callback) {
+WebSocketClientLite& WebSocketClientLite::onConnect(const std::function<void()>& callback) {
     m_onConnect = callback;
     return *this;
 }
 
-WebSocketClientLite& WebSocketClientLite::OnDisconnect(const std::function<void()>& callback) {
+WebSocketClientLite& WebSocketClientLite::onDisconnect(const std::function<void()>& callback) {
     m_onDisconnect = callback;
     return *this;
 }
 
-WebSocketClientLite& WebSocketClientLite::OnError(const std::function<void(const Result&)>& callback) {
+WebSocketClientLite& WebSocketClientLite::onError(const std::function<void(const Result&)>& callback) {
     m_onError = callback;
     return *this;
 }
 
-Result WebSocketClientLite::Connect() {
+Result WebSocketClientLite::connect() {
     if (m_connected) {
         return Result(ERROR_CODE::INVALID_PARAMETER, "Already connected");
     }
@@ -90,7 +90,7 @@ Result WebSocketClientLite::Connect() {
             
             // Check if socket is writable (connection completed)
             // For simplicity, we'll just try the handshake
-            auto handshakeResult = PerformWebSocketHandshake();
+            auto handshakeResult = performWebSocketHandshake();
             if (handshakeResult.IsSuccess()) {
                 m_connected = true;
                 std::cout << "🔗 Connected to WebSocket server at " << m_serverHost << ":" << m_serverPort << " (non-blocking)" << std::endl;
@@ -128,7 +128,7 @@ Result WebSocketClientLite::Connect() {
     }
     
     // Perform WebSocket handshake
-    auto handshakeResult = PerformWebSocketHandshake();
+    auto handshakeResult = performWebSocketHandshake();
     if (!handshakeResult.IsSuccess()) {
         m_socket->close();
         m_socket.reset();
@@ -148,7 +148,7 @@ Result WebSocketClientLite::Connect() {
     return Result();
 }
 
-Result WebSocketClientLite::Disconnect() {
+Result WebSocketClientLite::disconnect() {
     if (!m_connected) {
         return Result();
     }
@@ -173,24 +173,24 @@ Result WebSocketClientLite::Disconnect() {
     return Result();
 }
 
-Result WebSocketClientLite::SendMessage(const std::string& message) {
+Result WebSocketClientLite::sendMessage(const std::string& message) {
     if (!m_connected || !m_socket) {
         return Result(ERROR_CODE::INVALID_PARAMETER, "Not connected");
     }
     
     std::vector<uint8_t> data(message.begin(), message.end());
-    return SendWebSocketFrame(data, 0x1); // Text frame opcode
+    return sendWebSocketFrame(data, 0x1); // Text frame opcode
 }
 
-Result WebSocketClientLite::SendBinary(const std::vector<uint8_t>& data) {
+Result WebSocketClientLite::sendBinary(const std::vector<uint8_t>& data) {
     if (!m_connected || !m_socket) {
         return Result(ERROR_CODE::INVALID_PARAMETER, "Not connected");
     }
     
-    return SendWebSocketFrame(data, 0x2); // Binary frame opcode
+    return sendWebSocketFrame(data, 0x2); // Binary frame opcode
 }
 
-std::pair<Result, std::string> WebSocketClientLite::ReceiveMessage() {
+std::pair<Result, std::string> WebSocketClientLite::receiveMessage() {
     if (!m_connected || !m_socket) {
         return {Result(ERROR_CODE::INVALID_PARAMETER, "Not connected"), ""};
     }
@@ -204,7 +204,7 @@ std::pair<Result, std::string> WebSocketClientLite::ReceiveMessage() {
     return {Result(), message};
 }
 
-void WebSocketClientLite::ProcessMessages() {
+void WebSocketClientLite::processMessages() {
     if (!m_connected || !m_socket) {
         return;
     }
@@ -257,7 +257,7 @@ void WebSocketClientLite::ProcessMessages() {
     }
 }
 
-Result WebSocketClientLite::PerformWebSocketHandshake() {
+Result WebSocketClientLite::performWebSocketHandshake() {
     // Send WebSocket handshake request
     std::stringstream request;
     request << "GET / HTTP/1.1\r\n";
@@ -294,7 +294,7 @@ Result WebSocketClientLite::PerformWebSocketHandshake() {
     return Result();
 }
 
-Result WebSocketClientLite::SendWebSocketFrame(const std::vector<uint8_t>& data, int opcode) {
+Result WebSocketClientLite::sendWebSocketFrame(const std::vector<uint8_t>& data, int opcode) {
     if (!m_socket) {
         return Result(ERROR_CODE::INVALID_PARAMETER, "No socket available");
     }

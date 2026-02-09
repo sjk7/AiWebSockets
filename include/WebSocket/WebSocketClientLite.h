@@ -28,36 +28,36 @@ public:
     ~WebSocketClientLite();
     
     // Configuration
-    WebSocketClientLite& SetServer(const std::string& host, uint16_t port);
+    WebSocketClientLite& setServer(const std::string& host, uint16_t port);
     
     // Callback registration
-    WebSocketClientLite& OnMessage(const std::function<void(const std::string&)>& callback);
-    WebSocketClientLite& OnConnect(const std::function<void()>& callback);
-    WebSocketClientLite& OnDisconnect(const std::function<void()>& callback);
-    WebSocketClientLite& OnError(const std::function<void(const Result&)>& callback);
+    WebSocketClientLite& onMessage(const std::function<void(const std::string&)>& callback);
+    WebSocketClientLite& onConnect(const std::function<void()>& callback);
+    WebSocketClientLite& onDisconnect(const std::function<void()>& callback);
+    WebSocketClientLite& onError(const std::function<void(const Result&)>& callback);
     
     // Connection control
-    Result Connect();
-    Result Disconnect();
-    bool IsConnected() const { return m_connected; }
+    Result connect();
+    Result disconnect();
+    bool isConnected() const { return m_connected; }
     
     // Message sending
-    Result SendMessage(const std::string& message);
-    Result SendBinary(const std::vector<uint8_t>& data);
+    Result sendMessage(const std::string& message);
+    Result sendBinary(const std::vector<uint8_t>& data);
     
     // Message receiving (blocking)
-    std::pair<Result, std::string> ReceiveMessage();
+    std::pair<Result, std::string> receiveMessage();
     
     // Message receiving (non-blocking)
-    void ProcessMessages(); // Call this regularly to receive messages
+    void processMessages(); // Call this regularly to receive messages
     
     // Get connection info
-    std::string GetServerHost() const { return m_serverHost; }
-    uint16_t GetServerPort() const { return m_serverPort; }
+    std::string getServerHost() const { return m_serverHost; }
+    uint16_t getServerPort() const { return m_serverPort; }
 
 private:
-    Result PerformWebSocketHandshake();
-    Result SendWebSocketFrame(const std::vector<uint8_t>& data, int opcode);
+    Result performWebSocketHandshake();
+    Result sendWebSocketFrame(const std::vector<uint8_t>& data, int opcode);
 };
 
 } // namespace WebSocket
