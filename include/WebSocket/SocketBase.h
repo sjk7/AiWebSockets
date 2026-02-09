@@ -139,6 +139,13 @@ protected:
     Result getPeerNameNative(void* addr, int* addrLen) const;
     Result setBlockingNative(bool blocking);
     Result selectNativeSocket(int timeoutMs, bool* canRead, bool* canWrite) const;
+    
+    // Async I/O operations
+    Result initializeAsyncIO();
+    Result cleanupAsyncIO();
+    Result sendAsync(const void* data, size_t length, size_t* bytesSent);
+    Result receiveAsync(void* buffer, size_t bufferSize, size_t* bytesReceived);
+    bool isAsyncEnabled() const;
 
 private:
     // Pimpl pattern - hide all native socket details

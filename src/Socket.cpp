@@ -799,68 +799,6 @@ Socket::~Socket() {
 	void Socket::errorCallback(ErrorCallbackFn callback) {
 		std::lock_guard<std::mutex> lock(m_eventLoopMutex);
 		m_errorCallback = std::move(callback);
-	}
-
-	// Async I/O Implementation
-	Result Socket::enableAsyncIO() {
-		if (!isValid()) {
-			return Result(ErrorCode::invalidParameter, "Socket not created");
-		}
-
-		if (m_asyncEnabled.load()) {
-			return Result(); // Already enabled
-		}
-
-#ifdef _WIN32
-		// Create I/O Completion Port
-		m_completionPort = CreateIoCompletionPort((HANDLE)m_sock, nullptr, (ULONG_PTR)this, 0);
-		if (m_completionPort == nullptr) {
-			return Result(ErrorCode::unknownError, "Failed to create completion port");
-		}
-
-		// Initialize overlapped structures
-		memset(&m_sendOverlapped, 0, sizeof(m_sendOverlapped));
-		memset(&m_recvOverlapped, 0, sizeof(m_recvOverlapped));
-
-#else
-		// Create epoll instance
-		m_epollFd = epoll_create1(0);
-		if (m_epollFd == -1) {
-			return Result(ErrorCode::unknownError, "Failed to create epoll instance");
-		}
-
-		// Add socket to epoll
-		struct epoll_event event;
-		event.events = EPOLLIN | EPOLLOUT | EPOLLET;
-		event.data.fd = m_sock;
-
-		if (epoll_ctl(m_epollFd, EPOLL_CTL_ADD, m_sock, &event) == -1) {
-			close(m_epollFd);
-			m_epollFd = -1;
-			return Result(ErrorCode::unknownError, "Failed to add socket to epoll");
-		}
-#endif
-
-		m_asyncEnabled.store(true);
-		return Result();
-	}
-
-	Result Socket::sendAsync(const std::vector<uint8_t>& data) {
-		if (!m_asyncEnabled.load()) {
-			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
-		}
-
-		if (!isValid()) {
-			return Result(ErrorCode::invalidParameter, "Socket not created");
-		}
-
-		if (data.empty()) {
-			return Result(ErrorCode::invalidParameter, "No data to send");
-		}
-
-#ifdef _WIN32
-		// Use WSASend for async operation
-		WSABUF wsaBuf;
 		wsaBuf.buf = (CHAR*)data.data();
 		wsaBuf.len = (ULONG)data.size();
 

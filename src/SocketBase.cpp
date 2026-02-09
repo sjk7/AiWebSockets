@@ -11,39 +11,46 @@ class SocketImpl {
 public:
 #ifdef _WIN32
     SOCKET socket;
+    HANDLE completionPort;
+    WSAOVERLAPPED sendOverlapped;
+    WSAOVERLAPPED recvOverlapped;
 #else
     int socket;
+    int epollFd;
+    struct epoll_event epollEvents[16];
 #endif
     bool isValid;
-    
+    bool asyncEnabled;
+
     SocketImpl() 
 #ifdef _WIN32
         : socket(INVALID_SOCKET)
 #else
         : socket(-1)
 #endif
-        , isValid(false) {}
-    
-    SocketImpl(
+        , isValid(false), asyncEnabled(false) {
 #ifdef _WIN32
-        SOCKET nativeSocket
+        completionPort = nullptr;
+        memset(&sendOverlapped, 0, sizeof(sendOverlapped));
+        memset(&recvOverlapped, 0, sizeof(recvOverlapped));
 #else
-        int nativeSocket
+        epollFd = -1;
+        memset(epollEvents, 0, sizeof(epollEvents));
 #endif
-    ) : socket(nativeSocket), isValid(
-#ifdef _WIN32
-        nativeSocket != INVALID_SOCKET
-#else
-        nativeSocket != -1
-#endif
-    ) {}
+    }
     
     ~SocketImpl() {
         if (isValid) {
 #ifdef _WIN32
             closesocket(socket);
+            if (completionPort) {
+                CloseHandle(completionPort);
+            }
 #else
             close(socket);
+            if (epollFd != -1) {
+                close(epollFd);
+            }
 #endif
         }
     }
@@ -67,7 +74,11 @@ SocketImpl* SocketBase::getImpl() const {
 
 NativeSocketTypes::SocketType SocketBase::getNativeSocket() const {
     if (!m_impl) {
-        return NativeSocketTypes::INVALID_SOCKET;
+#ifdef _WIN32
+        return reinterpret_cast<NativeSocketTypes::SocketType>(INVALID_SOCKET);
+#else
+        return static_cast<NativeSocketTypes::SocketType>(-1);
+#endif
     }
 #ifdef _WIN32
     return reinterpret_cast<NativeSocketTypes::SocketType>(m_impl->socket);
@@ -78,14 +89,16 @@ NativeSocketTypes::SocketType SocketBase::getNativeSocket() const {
 
 void SocketBase::setNativeSocket(NativeSocketTypes::SocketType nativeSocket) {
     if (!m_impl) {
-        return;
+        m_impl = std::make_unique<SocketImpl>();
     }
+
 #ifdef _WIN32
     m_impl->socket = reinterpret_cast<SOCKET>(nativeSocket);
+    m_impl->isValid = (reinterpret_cast<SOCKET>(nativeSocket) != INVALID_SOCKET);
 #else
     m_impl->socket = static_cast<int>(nativeSocket);
+    m_impl->isValid = (static_cast<int>(nativeSocket) != -1);
 #endif
-    m_impl->isValid = (nativeSocket != NativeSocketTypes::INVALID_SOCKET);
 }
 
 Result SocketBase::createNativeSocket(int family, int type, int protocol) {
@@ -182,7 +195,7 @@ Result SocketBase::closeNativeSocket() {
 #endif
 
     if (result != 0) {
-        return Result(ErrorCode::socketCloseFailed, getLastSystemErrorCode());
+        return Result(ErrorCode::socketCreateFailed, getLastSystemErrorCode());
     }
 
     return Result();
@@ -361,6 +374,166 @@ Result SocketBase::selectNativeSocket(int timeoutMs, bool* canRead, bool* canWri
     *canRead = FD_ISSET(m_impl->socket, &readfds);
     *canWrite = FD_ISSET(m_impl->socket, &writefds);
     return Result();
+}
+
+Result SocketBase::initializeAsyncIO() {
+    if (!isValid()) {
+        return Result(ErrorCode::invalidParameter, "Socket not created");
+    }
+
+    if (m_impl->asyncEnabled) {
+        return Result(); // Already initialized
+    }
+
+#ifdef _WIN32
+    // Create I/O Completion Port
+    m_impl->completionPort = CreateIoCompletionPort((HANDLE)m_impl->socket, nullptr, (ULONG_PTR)this, 0);
+    if (m_impl->completionPort == nullptr) {
+        return Result(ErrorCode::unknownError, "Failed to create completion port");
+    }
+
+    // Initialize overlapped structures
+    memset(&m_impl->sendOverlapped, 0, sizeof(m_impl->sendOverlapped));
+    memset(&m_impl->recvOverlapped, 0, sizeof(m_impl->recvOverlapped));
+
+#else
+    // Create epoll instance
+    m_impl->epollFd = epoll_create1(0);
+    if (m_impl->epollFd == -1) {
+        return Result(ErrorCode::unknownError, "Failed to create epoll instance");
+    }
+
+    // Add socket to epoll
+    struct epoll_event event;
+    event.events = EPOLLIN | EPOLLOUT;
+    event.data.fd = m_impl->socket;
+    if (epoll_ctl(m_impl->epollFd, EPOLL_CTL_ADD, m_impl->socket, &event) == -1) {
+        close(m_impl->epollFd);
+        m_impl->epollFd = -1;
+        return Result(ErrorCode::unknownError, "Failed to add socket to epoll");
+    }
+#endif
+
+    m_impl->asyncEnabled = true;
+    return Result();
+}
+
+Result SocketBase::cleanupAsyncIO() {
+    if (!m_impl->asyncEnabled) {
+        return Result(); // Not initialized
+    }
+
+#ifdef _WIN32
+    if (m_impl->completionPort) {
+        CloseHandle(m_impl->completionPort);
+        m_impl->completionPort = nullptr;
+    }
+#else
+    if (m_impl->epollFd != -1) {
+        close(m_impl->epollFd);
+        m_impl->epollFd = -1;
+    }
+#endif
+
+    m_impl->asyncEnabled = false;
+    return Result();
+}
+
+Result SocketBase::sendAsync(const void* data, size_t length, size_t* bytesSent) {
+    if (!isValid() || !m_impl->asyncEnabled) {
+        return Result(ErrorCode::invalidParameter, "Socket not created or async not enabled");
+    }
+
+    if (!data || length == 0 || !bytesSent) {
+        return Result(ErrorCode::invalidParameter, "Invalid parameters");
+    }
+
+#ifdef _WIN32
+    WSABUF wsaBuf;
+    wsaBuf.buf = (CHAR*)data;
+    wsaBuf.len = (ULONG)length;
+
+    DWORD bytesSentWin = 0;
+    int result = WSASend(m_impl->socket, &wsaBuf, 1, &bytesSentWin, 0, &m_impl->sendOverlapped, nullptr);
+
+    if (result == SOCKET_ERROR) {
+        int error = WSAGetLastError();
+        if (error != WSA_IO_PENDING) {
+            *bytesSent = 0;
+            return Result(ErrorCode::socketSendFailed, error);
+        }
+        // Operation pending - will be completed later
+        *bytesSent = 0;
+        return Result();
+    }
+
+    *bytesSent = bytesSentWin;
+    return Result();
+#else
+    ssize_t result = send(m_impl->socket, data, length, MSG_DONTWAIT);
+    if (result < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            *bytesSent = 0;
+            return Result(); // Would block, try again later
+        }
+        *bytesSent = 0;
+        return Result(ErrorCode::socketSendFailed, errno);
+    }
+
+    *bytesSent = result;
+    return Result();
+#endif
+}
+
+Result SocketBase::receiveAsync(void* buffer, size_t bufferSize, size_t* bytesReceived) {
+    if (!isValid() || !m_impl->asyncEnabled) {
+        return Result(ErrorCode::invalidParameter, "Socket not created or async not enabled");
+    }
+
+    if (!buffer || bufferSize == 0 || !bytesReceived) {
+        return Result(ErrorCode::invalidParameter, "Invalid parameters");
+    }
+
+#ifdef _WIN32
+    WSABUF wsaBuf;
+    wsaBuf.buf = (CHAR*)buffer;
+    wsaBuf.len = (ULONG)bufferSize;
+
+    DWORD bytesReceivedWin = 0;
+    DWORD flags = 0;
+    int result = WSARecv(m_impl->socket, &wsaBuf, 1, &bytesReceivedWin, &flags, &m_impl->recvOverlapped, nullptr);
+
+    if (result == SOCKET_ERROR) {
+        int error = WSAGetLastError();
+        if (error != WSA_IO_PENDING) {
+            *bytesReceived = 0;
+            return Result(ErrorCode::socketReceiveFailed, error);
+        }
+        // Operation pending - will be completed later
+        *bytesReceived = 0;
+        return Result();
+    }
+
+    *bytesReceived = bytesReceivedWin;
+    return Result();
+#else
+    ssize_t result = recv(m_impl->socket, buffer, bufferSize, MSG_DONTWAIT);
+    if (result < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            *bytesReceived = 0;
+            return Result(); // Would block, try again later
+        }
+        *bytesReceived = 0;
+        return Result(ErrorCode::socketReceiveFailed, errno);
+    }
+
+    *bytesReceived = result;
+    return Result();
+#endif
+}
+
+bool SocketBase::isAsyncEnabled() const {
+    return m_impl && m_impl->asyncEnabled;
 }
 
 } // namespace nob
