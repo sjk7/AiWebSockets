@@ -74,7 +74,7 @@ Result HttpWsServer::Start() {
     }
     
     // Set socket options
-    m_serverSocket->ReuseAddress(true);
+    m_serverSocket->reuseAddress(true);
     
     // Bind to address
     auto bindResult = m_serverSocket->bind(m_bindAddress, m_port);
@@ -182,7 +182,7 @@ void HttpWsServer::ServerLoop() {
         }
         
         // Enable async I/O for better performance
-        auto asyncResult = clientSocket->EnableAsyncIO();
+        auto asyncResult = clientSocket->enableAsyncIO();
         if (!asyncResult.IsSuccess()) {
             // Log warning but continue with sync mode
             if (m_onError) m_onError("Failed to enable async I/O: " + asyncResult.GetErrorMessage());
@@ -315,7 +315,7 @@ void HttpWsServer::HandleWebSocketConnection(ClientConnection* client, const std
     }
     
     // Handle WebSocket messages
-    while (!m_shouldStop && client->socket && client->socket->Valid()) {
+    while (!m_shouldStop && client->socket && client->socket->valid()) {
         auto [msgResult, msgData] = client->socket->receive(m_securityConfig.maxMessageSize);
         if (!msgResult.IsSuccess() || msgData.empty()) {
             break;
@@ -419,8 +419,8 @@ void HttpWsServer::SendHTTPResponse(ClientConnection* client, const std::string&
     if (!client || !client->socket) return;
     
     // Enable async I/O for better performance
-    if (!client->socket->IsAsyncEnabled()) {
-        auto asyncResult = client->socket->EnableAsyncIO();
+    if (!client->socket->isAsyncEnabled()) {
+        auto asyncResult = client->socket->enableAsyncIO();
         if (!asyncResult.IsSuccess()) {
             // Fallback to sync if async fails
             SendHTTPResponseSync(client, status, contentType, body);
@@ -463,7 +463,7 @@ void HttpWsServer::SendHTTPResponse(ClientConnection* client, const std::string&
     response.insert(response.end(), body.begin(), body.end());
     
     // Send asynchronously - non-blocking
-    auto sendResult = client->socket->SendAsync(response);
+    auto sendResult = client->socket->sendAsync(response);
     if (!sendResult.IsSuccess()) {
         // Fallback to sync if async send fails
         SendHTTPResponseSync(client, status, contentType, body);
@@ -608,7 +608,7 @@ void HttpWsServer::RemoveConnection(const std::string& ip) {
 }
 
 std::string HttpWsServer::GetClientIP(const Socket& socket) {
-    return socket.RemoteAddress();
+    return socket.remoteAddress();
 }
 
 HTTPRequest HttpWsServer::ParseHTTPRequest(const std::string& request, const std::string& clientIP) {

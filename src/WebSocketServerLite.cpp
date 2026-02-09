@@ -146,7 +146,7 @@ int WebSocketServerLite::GetCurrentConnectionCount() const {
 
 Result WebSocketServerLite::InitializeServer() {
     // Check if port is available
-    if (!Socket::IsPortAvailable(m_port, m_bindAddress)) {
+    if (!Socket::isPortAvailable(m_port, m_bindAddress)) {
         return Result(ERROR_CODE::SOCKET_BIND_FAILED, "Port " + std::to_string(m_port) + " is already in use");
     }
     
@@ -155,7 +155,7 @@ Result WebSocketServerLite::InitializeServer() {
     
     // Determine socket family based on bind address
     SOCKET_FAMILY family = SOCKET_FAMILY::IPV4; // default
-    if (Socket::IsIPv6Address(m_bindAddress) || m_bindAddress == "::") {
+    if (Socket::isIPv6Address(m_bindAddress) || m_bindAddress == "::") {
         family = SOCKET_FAMILY::IPV6;
     }
     
@@ -166,14 +166,14 @@ Result WebSocketServerLite::InitializeServer() {
     }
     
     // Set socket to non-blocking mode FIRST
-    auto blockingResult = m_serverSocket->Blocking(false);
+    auto blockingResult = m_serverSocket->blocking(false);
     if (!blockingResult.IsSuccess()) {
         std::cout << "⚠️ Warning: Failed to set non-blocking mode: " << blockingResult.GetErrorMessage() << std::endl;
         // Continue anyway, but this is a problem
     }
     
     // Set socket options
-    auto reuseResult = m_serverSocket->ReuseAddress(true);
+    auto reuseResult = m_serverSocket->reuseAddress(true);
     if (!reuseResult.IsSuccess()) {
         std::cout << "⚠️ Warning: Failed to set reuse address: " << reuseResult.GetErrorMessage() << std::endl;
     }
@@ -204,7 +204,7 @@ void WebSocketServerLite::HandleClientConnection(std::unique_ptr<Socket> clientS
     std::string clientIP = GetClientIP(*clientSocket);
     
     // Set client socket to non-blocking mode
-    auto blockingResult = clientSocket->Blocking(false);
+    auto blockingResult = clientSocket->blocking(false);
     if (!blockingResult.IsSuccess()) {
         std::cout << "⚠️ Warning: Failed to set client socket non-blocking: " << blockingResult.GetErrorMessage() << std::endl;
     }
@@ -461,7 +461,7 @@ std::string WebSocketServerLite::GetClientIP(const Socket& socket, const std::st
     }
     
     // Fallback to direct socket peer IP
-    return socket.RemoteAddress();
+    return socket.remoteAddress();
 }
 
 bool WebSocketServerLite::IsConnectionAllowed(const std::string& clientIP) {

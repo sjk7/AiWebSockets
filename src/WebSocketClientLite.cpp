@@ -59,7 +59,7 @@ Result WebSocketClientLite::Connect() {
     }
     
     // Set socket to non-blocking mode BEFORE connecting
-    auto blockingResult = m_socket->Blocking(false);
+    auto blockingResult = m_socket->blocking(false);
     if (!blockingResult.IsSuccess()) {
         std::cout << "⚠️ Warning: Failed to set non-blocking mode: " << blockingResult.GetErrorMessage() << std::endl;
     }

@@ -67,37 +67,37 @@ public:
     std::pair<Result, std::vector<uint8_t>> receive(size_t maxLength, int timeoutMs);
 
     // Socket options
-    Result Blocking(bool blocking);
-    Result ReuseAddress(bool reuse);
-    Result KeepAlive(bool keepAlive);
-    Result SendBufferSize(size_t size);
-    Result ReceiveBufferSize(size_t size);
+    Result blocking(bool blocking);
+    Result reuseAddress(bool reuse);
+    Result keepAlive(bool keepAlive);
+    Result sendBufferSize(size_t size);
+    Result receiveBufferSize(size_t size);
 
     // Getters
-    bool Valid() const;
-    bool Blocking() const;
-    std::string LocalAddress() const;
-    uint16_t LocalPort() const;
-    std::string RemoteAddress() const;
-    uint16_t RemotePort() const;
+    bool valid() const;
+    bool blocking() const;
+    std::string localAddress() const;
+    uint16_t localPort() const;
+    std::string remoteAddress() const;
+    uint16_t remotePort() const;
 
     // Utility methods
-    static bool IsIPAddress(const std::string& address);
-    static bool IsIPv4Address(const std::string& address);
-    static bool IsIPv6Address(const std::string& address);
-    static bool IsPortAvailable(uint16_t port, const std::string& address = "127.0.0.1");
-    static std::vector<std::string> GetLocalIPAddresses();
+    static bool isIPAddress(const std::string& address);
+    static bool isIPv4Address(const std::string& address);
+    static bool isIPv6Address(const std::string& address);
+    static bool isPortAvailable(uint16_t port, const std::string& address = "127.0.0.1");
+    static std::vector<std::string> getLocalIPAddresses();
 
     // Async I/O methods (high performance)
-    Result EnableAsyncIO();
-    Result SendAsync(const std::vector<uint8_t>& data);
-    Result ReceiveAsync(size_t maxLength);
-    bool IsAsyncEnabled() const;
+    Result enableAsyncIO();
+    Result sendAsync(const std::vector<uint8_t>& data);
+    Result receiveAsync(size_t maxLength);
+    bool isAsyncEnabled() const;
 
     // Event loop methods (for server sockets)
-    Result StartEventLoop();
-    Result StopEventLoop();
-    bool EventLoopRunning() const;
+    Result startEventLoop();
+    Result stopEventLoop();
+    bool eventLoopRunning() const;
 
     // Callback types for async events
     using AcceptCallbackFn = std::function<void(std::unique_ptr<Socket>)>;
@@ -105,9 +105,9 @@ public:
     using ErrorCallbackFn = std::function<void(const Result&)>;
 
     // Event callbacks
-    void AcceptCallback(AcceptCallbackFn callback);
-    void ReceiveCallback(ReceiveCallbackFn callback);
-    void ErrorCallback(ErrorCallbackFn callback);
+    void acceptCallback(AcceptCallbackFn callback);
+    void receiveCallback(ReceiveCallbackFn callback);
+    void errorCallback(ErrorCallbackFn callback);
 
 private:
     // Platform-specific types (internal only)
@@ -123,7 +123,7 @@ private:
     explicit Socket(SOCKET_TYPE_NATIVE nativeSocket);
 
     // Factory method for creating sockets from native handles
-    static std::unique_ptr<Socket> CreateFromNative(SOCKET_TYPE_NATIVE nativeSocket);
+    static std::unique_ptr<Socket> createFromNative(SOCKET_TYPE_NATIVE nativeSocket);
 
     SOCKET_TYPE_NATIVE m_socket;
     bool m_isBlocking;
@@ -160,18 +160,18 @@ private:
     mutable std::mutex m_eventLoopMutex;
     
     // Event loop methods
-    void EventLoopFunction();
-    Result ProcessSocketEvents();
-    void HandleAcceptEvent();
-    void HandleReceiveEvent();
+    void eventLoopFunction();
+    Result processSocketEvents();
+    void handleAcceptEvent();
+    void handleReceiveEvent();
 
     // Platform-specific helper methods (private)
-    Result SetSocketOption(int level, int option, const void* value, size_t length);
-    Result GetSocketOption(int level, int option, void* value, size_t* length) const;
-    void UpdateLastError();
-    std::pair<std::string, uint16_t> GetSocketAddress(const struct sockaddr* addr) const;
-    std::pair<Result, std::pair<std::string, uint16_t>> GetSocketAddress() const;
-    static std::string GetAddressString(const struct sockaddr* addr);
+    Result setSocketOption(int level, int option, const void* value, size_t length);
+    Result getSocketOption(int level, int option, void* value, size_t* length) const;
+    void updateLastError();
+    std::pair<std::string, uint16_t> getSocketAddress(const struct sockaddr* addr) const;
+    std::pair<Result, std::pair<std::string, uint16_t>> getSocketAddress() const;
+    static std::string getAddressString(const struct sockaddr* addr);
 };
 
 } // namespace WebSocket
