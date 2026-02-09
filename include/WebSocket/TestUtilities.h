@@ -23,7 +23,7 @@ namespace WebSocket {
  * @param dataSize The size of the test data to generate
  * @return std::vector<uint8_t> Test data with pattern 00, 01, 02, ..., FF, 00, 01, ...
  */
-inline std::vector<uint8_t> CreateTestData(size_t dataSize) {
+inline std::vector<uint8_t> createTestData(size_t dataSize) {
     std::vector<uint8_t> testData(dataSize);
     std::iota(testData.begin(), testData.end(), static_cast<uint8_t>(0));
     return testData;
@@ -36,7 +36,7 @@ inline std::vector<uint8_t> CreateTestData(size_t dataSize) {
  * @param expectedSize The expected size of the data
  * @return true if data matches expected pattern, false otherwise
  */
-inline bool VerifyDataIntegrity(const std::vector<uint8_t>& receivedData, size_t expectedSize) {
+inline bool verifyDataIntegrity(const std::vector<uint8_t>& receivedData, size_t expectedSize) {
     if (receivedData.size() != expectedSize) {
         return false;
     }

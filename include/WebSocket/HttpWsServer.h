@@ -21,7 +21,7 @@ struct ClientConnection;
 /**
  * @brief Protection configuration for the HTTP/WebSocket server
  */
-struct ProtectionConfig {
+struct protectionConfig {
     // Connection limits
     int maxConnectionsPerIP = 10;           // Max connections from single IP
     int maxConnectionsTotal = 100;          // Max total connections
@@ -89,7 +89,7 @@ struct ConnectionInfo {
 struct WebSocketMessageWithIP {
     WebSocketMessage message;
     std::string clientIP;
-    WEBSOCKET_OPCODE opcode;
+    websocketOpcode opcode;
 };
 
 /**
@@ -105,7 +105,7 @@ private:
     std::string m_bindAddress;
     uint16_t m_port;
     bool m_running;
-    ProtectionConfig m_protectionConfig;
+    protectionConfig m_protectionConfig;
     
     // Connection tracking
     std::map<std::string, ConnectionInfo> m_connectionMap;
@@ -132,7 +132,7 @@ public:
     // Constructor
     explicit HttpWsServer(uint16_t port = 8080, 
                          const std::string& bindAddress = "127.0.0.1",
-                         const ProtectionConfig& config = ProtectionConfig{});
+                         const protectionConfig& config = protectionConfig{});
     
     // Destructor
     ~HttpWsServer();
@@ -140,7 +140,7 @@ public:
     // Configuration methods
     HttpWsServer& setPort(uint16_t port);
     HttpWsServer& setBindAddress(const std::string& address);
-    HttpWsServer& setProtectionConfig(const ProtectionConfig& config);
+    HttpWsServer& setprotectionConfig(const protectionConfig& config);
     
     // Callback registration
     HttpWsServer& onHttpRequest(const std::function<std::string(const HTTPRequest&)>& callback);
@@ -165,7 +165,7 @@ public:
     void blockIP(const std::string& ip);
     void unblockIP(const std::string& ip);
     std::vector<std::string> getBlockedIPs() const;
-    ProtectionConfig getProtectionConfig() const { return m_protectionConfig; }
+    protectionConfig getprotectionConfig() const { return m_protectionConfig; }
 
 private:
     // Internal methods

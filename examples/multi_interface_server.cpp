@@ -239,7 +239,7 @@ public:
 // Test functions
 class MultiInterfaceServerTest {
 public:
-    static bool RunAllTests() {
+    static bool runAllTests() {
         std::cout << "🧪 Running Multi-Interface Server Tests..." << std::endl;
         
         bool allPassed = true;
@@ -472,7 +472,7 @@ int main(int argc, char* argv[]) {
     
     if (mode == "test") {
         // Run tests only
-        bool testsPassed = MultiInterfaceServerTest::RunAllTests();
+        bool testsPassed = MultiInterfaceServerTest::runAllTests();
         return testsPassed ? 0 : 1;
     }
     

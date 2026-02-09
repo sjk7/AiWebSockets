@@ -1,0 +1,38 @@
+[
+{
+  "directory": "C:/Users/cool/Desktop/aiWebSockets/build-release",
+  "command": "C:\\Users\\cool\\AppData\\Roaming\\ClangPowerTools\\LLVM\\LLVM21.1.6\\bin\\clang++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -IC:/Users/cool/Desktop/aiWebSockets/include -O3 -DNDEBUG -std=c++17 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt --target=x86_64-pc-windows-msvc -fms-extensions -fms-compatibility-version=19.20 -Werror -Wall -Wextra -Wpedantic -o CMakeFiles\\aiWebSockets.dir\\src\\Socket.cpp.obj -c C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\Socket.cpp",
+  "file": "C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\Socket.cpp",
+  "output": "CMakeFiles\\aiWebSockets.dir\\src\\Socket.cpp.obj"
+},
+{
+  "directory": "C:/Users/cool/Desktop/aiWebSockets/build-release",
+  "command": "C:\\Users\\cool\\AppData\\Roaming\\ClangPowerTools\\LLVM\\LLVM21.1.6\\bin\\clang++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -IC:/Users/cool/Desktop/aiWebSockets/include -O3 -DNDEBUG -std=c++17 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt --target=x86_64-pc-windows-msvc -fms-extensions -fms-compatibility-version=19.20 -Werror -Wall -Wextra -Wpedantic -o CMakeFiles\\aiWebSockets.dir\\src\\WebSocketProtocol.cpp.obj -c C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\WebSocketProtocol.cpp",
+  "file": "C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\WebSocketProtocol.cpp",
+  "output": "CMakeFiles\\aiWebSockets.dir\\src\\WebSocketProtocol.cpp.obj"
+},
+{
+  "directory": "C:/Users/cool/Desktop/aiWebSockets/build-release",
+  "command": "C:\\Users\\cool\\AppData\\Roaming\\ClangPowerTools\\LLVM\\LLVM21.1.6\\bin\\clang++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -IC:/Users/cool/Desktop/aiWebSockets/include -O3 -DNDEBUG -std=c++17 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt --target=x86_64-pc-windows-msvc -fms-extensions -fms-compatibility-version=19.20 -Werror -Wall -Wextra -Wpedantic -o CMakeFiles\\aiWebSockets.dir\\src\\ErrorCodes.cpp.obj -c C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\ErrorCodes.cpp",
+  "file": "C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\ErrorCodes.cpp",
+  "output": "CMakeFiles\\aiWebSockets.dir\\src\\ErrorCodes.cpp.obj"
+},
+{
+  "directory": "C:/Users/cool/Desktop/aiWebSockets/build-release",
+  "command": "C:\\Users\\cool\\AppData\\Roaming\\ClangPowerTools\\LLVM\\LLVM21.1.6\\bin\\clang++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -IC:/Users/cool/Desktop/aiWebSockets/include -O3 -DNDEBUG -std=c++17 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt --target=x86_64-pc-windows-msvc -fms-extensions -fms-compatibility-version=19.20 -Werror -Wall -Wextra -Wpedantic -o CMakeFiles\\aiWebSockets.dir\\src\\WebSocketServerLite.cpp.obj -c C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\WebSocketServerLite.cpp",
+  "file": "C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\WebSocketServerLite.cpp",
+  "output": "CMakeFiles\\aiWebSockets.dir\\src\\WebSocketServerLite.cpp.obj"
+},
+{
+  "directory": "C:/Users/cool/Desktop/aiWebSockets/build-release",
+  "command": "C:\\Users\\cool\\AppData\\Roaming\\ClangPowerTools\\LLVM\\LLVM21.1.6\\bin\\clang++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -IC:/Users/cool/Desktop/aiWebSockets/include -O3 -DNDEBUG -std=c++17 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt --target=x86_64-pc-windows-msvc -fms-extensions -fms-compatibility-version=19.20 -Werror -Wall -Wextra -Wpedantic -o CMakeFiles\\aiWebSockets.dir\\src\\WebSocketClientLite.cpp.obj -c C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\WebSocketClientLite.cpp",
+  "file": "C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\WebSocketClientLite.cpp",
+  "output": "CMakeFiles\\aiWebSockets.dir\\src\\WebSocketClientLite.cpp.obj"
+},
+{
+  "directory": "C:/Users/cool/Desktop/aiWebSockets/build-release",
+  "command": "C:\\Users\\cool\\AppData\\Roaming\\ClangPowerTools\\LLVM\\LLVM21.1.6\\bin\\clang++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -IC:/Users/cool/Desktop/aiWebSockets/include -O3 -DNDEBUG -std=c++17 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt --target=x86_64-pc-windows-msvc -fms-extensions -fms-compatibility-version=19.20 -Werror -Wall -Wextra -Wpedantic -o CMakeFiles\\aiWebSockets.dir\\src\\HttpWsServer.cpp.obj -c C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\HttpWsServer.cpp",
+  "file": "C:\\Users\\cool\\Desktop\\aiWebSockets\\src\\HttpWsServer.cpp",
+  "output": "CMakeFiles\\aiWebSockets.dir\\src\\HttpWsServer.cpp.obj"
+}
+]

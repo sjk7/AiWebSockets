@@ -10,47 +10,47 @@
 
 namespace WebSocket {
 
-const char* getErrorCodeString(ERROR_CODE code) {
+const char* getErrorCodeString(ErrorCode code) {
     switch (code) {
-        case ERROR_CODE::SUCCESS:
+        case ErrorCode::success:
             return "Success";
-        case ERROR_CODE::SOCKET_CREATE_FAILED:
+        case ErrorCode::socketCreateFailed:
             return "Socket creation failed";
-        case ERROR_CODE::SOCKET_BIND_FAILED:
+        case ErrorCode::socketBindFailed:
             return "Socket bind failed";
-        case ERROR_CODE::SOCKET_LISTEN_FAILED:
+        case ErrorCode::socketListenFailed:
             return "Socket listen failed";
-        case ERROR_CODE::SOCKET_ACCEPT_FAILED:
+        case ErrorCode::socketAcceptFailed:
             return "Socket accept failed";
-        case ERROR_CODE::SOCKET_CONNECT_FAILED:
+        case ErrorCode::socketConnectFailed:
             return "Socket connect failed";
-        case ERROR_CODE::SOCKET_SEND_FAILED:
+        case ErrorCode::socketSendFailed:
             return "Socket send failed";
-        case ERROR_CODE::SOCKET_RECEIVE_FAILED:
+        case ErrorCode::socketReceiveFailed:
             return "Socket receive failed";
-        case ERROR_CODE::SOCKET_SET_OPTION_FAILED:
+        case ErrorCode::socketSetOptionFailed:
             return "Socket set option failed";
-        case ERROR_CODE::SOCKET_GETSOCKNAME_FAILED:
+        case ErrorCode::socketGetSocknameFailed:
             return "Socket getsockname failed";
-        case ERROR_CODE::SOCKET_ADDRESS_PARSE_FAILED:
+        case ErrorCode::socketAddressParseFailed:
             return "Socket address parse failed";
-        case ERROR_CODE::INVALID_PARAMETER:
+        case ErrorCode::invalidParameter:
             return "Invalid parameter";
-        case ERROR_CODE::MEMORY_ALLOCATION_FAILED:
+        case ErrorCode::memoryAllocationFailed:
             return "Memory allocation failed";
-        case ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED:
+        case ErrorCode::websocketHandshakeFailed:
             return "WebSocket handshake failed";
-        case ERROR_CODE::WEBSOCKET_FRAME_PARSE_FAILED:
+        case ErrorCode::websocketFrameParseFailed:
             return "WebSocket frame parse failed";
-        case ERROR_CODE::WEBSOCKET_INVALID_OPCODE:
+        case ErrorCode::websocketInvalidOpcode:
             return "WebSocket invalid opcode";
-        case ERROR_CODE::WEBSOCKET_PAYLOAD_TOO_LARGE:
+        case ErrorCode::websocketPayloadTooLarge:
             return "WebSocket payload too large";
-        case ERROR_CODE::WEBSOCKET_CONNECTION_CLOSED:
+        case ErrorCode::websocketConnectionClosed:
             return "WebSocket connection closed";
-        case ERROR_CODE::THREAD_CREATION_FAILED:
+        case ErrorCode::threadCreationFailed:
             return "Thread creation failed";
-        case ERROR_CODE::UNKNOWN_ERROR:
+        case ErrorCode::unknownError:
         default:
             return "Unknown error";
     }

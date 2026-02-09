@@ -78,7 +78,7 @@ int main() {
         std::cout << "📨 Client received " << receivedData.size() << " bytes" << std::endl;
         
         // Verify data integrity using TestUtilities
-        if (WebSocket::VerifyDataIntegrity(receivedData, expectedSize)) {
+        if (WebSocket::verifyDataIntegrity(receivedData, expectedSize)) {
             std::cout << "✅ Data integrity verified - Server-to-client transfer successful!" << std::endl;
         } else {
             std::cout << "❌ Data integrity check failed" << std::endl;
@@ -98,7 +98,7 @@ int main() {
     
     // Create test data using TestUtilities
     const size_t testDataSize = 1024;
-    std::vector<uint8_t> testData = WebSocket::CreateTestData(testDataSize);
+    std::vector<uint8_t> testData = WebSocket::createTestData(testDataSize);
     
     std::cout << "📤 Server sending " << testData.size() << " bytes to client..." << std::endl;
     

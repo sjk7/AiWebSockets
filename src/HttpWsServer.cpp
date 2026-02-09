@@ -7,7 +7,7 @@ namespace WebSocket {
 
 HttpWsServer::HttpWsServer(uint16_t port, 
                            const std::string& bindAddress,
-                           const ProtectionConfig& config)
+                           const protectionConfig& config)
     : m_bindAddress(bindAddress), m_port(port), m_running(false), m_protectionConfig(config) {
 }
 
@@ -25,7 +25,7 @@ HttpWsServer& HttpWsServer::setBindAddress(const std::string& address) {
     return *this;
 }
 
-HttpWsServer& HttpWsServer::setProtectionConfig(const ProtectionConfig& config) {
+HttpWsServer& HttpWsServer::setprotectionConfig(const protectionConfig& config) {
     m_protectionConfig = config;
     return *this;
 }
@@ -62,12 +62,12 @@ HttpWsServer& HttpWsServer::onError(const std::function<void(const std::string&)
 
 Result HttpWsServer::start() {
     if (m_running) {
-        return Result(ERROR_CODE::UNKNOWN_ERROR, "Server is already running");
+        return Result(ErrorCode::unknownError, "Server is already running");
     }
     
     // Create server socket
     m_serverSocket = std::make_unique<Socket>();
-    auto createResult = m_serverSocket->create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
+    auto createResult = m_serverSocket->create(socketFamily::IPV4, socketType::TCP);
     if (!createResult.isSuccess()) {
         if (m_onError) m_onError("Failed to create server socket: " + createResult.getErrorMessage());
         return createResult;
@@ -334,7 +334,7 @@ void HttpWsServer::handleWebSocketConnection(ClientConnection* client, const std
         }
         
         // Handle text messages
-        if (frame.Opcode == WEBSOCKET_OPCODE::TEXT) {
+        if (frame.Opcode == websocketOpcode::TEXT) {
             std::string message(frame.PayloadData.begin(), frame.PayloadData.end());
             
             // Validate message size
@@ -362,7 +362,7 @@ void HttpWsServer::handleWebSocketConnection(ClientConnection* client, const std
                     if (m_onError) m_onError("WebSocket message handler error: " + std::string(e.what()));
                 }
             }
-        } else if (frame.Opcode == WEBSOCKET_OPCODE::CLOSE) {
+        } else if (frame.Opcode == websocketOpcode::CLOSE) {
             break;
         }
     }

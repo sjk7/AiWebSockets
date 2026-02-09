@@ -37,19 +37,19 @@ private:
     }
 
 public:
-    bool RunAllTests() {
+    bool runAllTests() {
         LogSection("Socket Communication Test Suite");
         
         // Initialize socket system
         // Note: Socket system is now automatically initialized when first socket is created
 
         // Run all test categories
-        TestBasicCommunication();
-        TestMultipleConnections();
-        TestDataTypes();
-        TestLargeData();
-        TestConcurrentConnections();
-        TestErrorHandling();
+        testBasicCommunication();
+        testMultipleConnections();
+        testDataTypes();
+        testLargeData();
+        testConcurrentConnections();
+        testErrorHandling();
 
         // Cleanup
         // Note: Socket system cleanup is now automatic
@@ -63,7 +63,7 @@ public:
     }
 
 private:
-    void TestBasicCommunication() {
+    void testBasicCommunication() {
         LogSection("Basic Communication Test");
         
         Socket serverSocket;
@@ -138,7 +138,7 @@ private:
         serverSocket.Close();
     }
 
-    void TestMultipleConnections() {
+    void testMultipleConnections() {
         LogSection("Multiple Connections Test");
         
         // Create server socket
@@ -199,7 +199,7 @@ private:
         serverSocket.Close();
     }
 
-    void TestDataTypes() {
+    void testDataTypes() {
         LogSection("Data Types Test");
         
         // Setup server and client
@@ -249,7 +249,7 @@ private:
         serverSocket.Close();
     }
 
-    void TestLargeData() {
+    void testLargeData() {
         LogSection("Large Data Test");
         
         // Setup server and client
@@ -320,7 +320,7 @@ private:
         serverSocket.Close();
     }
 
-    void TestConcurrentConnections() {
+    void testConcurrentConnections() {
         LogSection("Concurrent Connections Test");
         
         // Create server socket
@@ -389,7 +389,7 @@ private:
         serverSocket.Close();
     }
 
-    void TestErrorHandling() {
+    void testErrorHandling() {
         LogSection("Error Handling Test");
         
         // Test invalid socket operations
@@ -423,7 +423,7 @@ int main() {
     std::cout << "=====================================" << std::endl;
     
     SocketTestSuite testSuite;
-    bool allTestsPassed = testSuite.RunAllTests();
+    bool allTestsPassed = testSuite.runAllTests();
     
     std::cout << "\n=====================================" << std::endl;
     if (allTestsPassed) {

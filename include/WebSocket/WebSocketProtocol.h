@@ -37,7 +37,7 @@ public:
     static WebSocketFrame createCloseFrame(uint16_t code = 1000, const std::string& reason = "");
     
     // Validation methods
-    static bool isValidOpcode(WEBSOCKET_OPCODE opcode);
+    static bool isValidOpcode(websocketOpcode opcode);
     static bool isValidUTF8(const std::vector<uint8_t>& data);
     
 private:

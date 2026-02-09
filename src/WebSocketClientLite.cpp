@@ -44,12 +44,12 @@ WebSocketClientLite& WebSocketClientLite::onError(const std::function<void(const
 
 Result WebSocketClientLite::connect() {
     if (m_connected) {
-        return Result(ERROR_CODE::INVALID_PARAMETER, "Already connected");
+        return Result(ErrorCode::invalidParameter, "Already connected");
     }
     
     // Create socket
     m_socket = std::make_unique<Socket>();
-    auto createResult = m_socket->create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
+    auto createResult = m_socket->create(socketFamily::IPV4, socketType::TCP);
     if (!createResult.isSuccess()) {
         m_socket.reset();
         if (m_onError) {
@@ -102,7 +102,7 @@ Result WebSocketClientLite::connect() {
             }
             
             // Check if connection failed
-            if (handshakeResult.getErrorCode() == ERROR_CODE::SOCKET_RECEIVE_FAILED) {
+            if (handshakeResult.getErrorCode() == ErrorCode::socketReceiveFailed) {
                 int handshakeSystemError = handshakeResult.getSystemErrorCode();
 #ifdef _WIN32
                 if (handshakeSystemError != WSAEWOULDBLOCK && handshakeSystemError != WSAECONNREFUSED) {
@@ -120,7 +120,7 @@ Result WebSocketClientLite::connect() {
         
         // Connection timeout
         m_socket.reset();
-        Result timeoutResult(ERROR_CODE::SOCKET_CONNECT_FAILED, "Connection timeout");
+        Result timeoutResult(ErrorCode::socketConnectFailed, "Connection timeout");
         if (m_onError) {
             m_onError(timeoutResult);
         }
@@ -175,7 +175,7 @@ Result WebSocketClientLite::disconnect() {
 
 Result WebSocketClientLite::sendMessage(const std::string& message) {
     if (!m_connected || !m_socket) {
-        return Result(ERROR_CODE::INVALID_PARAMETER, "Not connected");
+        return Result(ErrorCode::invalidParameter, "Not connected");
     }
     
     std::vector<uint8_t> data(message.begin(), message.end());
@@ -184,7 +184,7 @@ Result WebSocketClientLite::sendMessage(const std::string& message) {
 
 Result WebSocketClientLite::sendBinary(const std::vector<uint8_t>& data) {
     if (!m_connected || !m_socket) {
-        return Result(ERROR_CODE::INVALID_PARAMETER, "Not connected");
+        return Result(ErrorCode::invalidParameter, "Not connected");
     }
     
     return sendWebSocketFrame(data, 0x2); // Binary frame opcode
@@ -192,7 +192,7 @@ Result WebSocketClientLite::sendBinary(const std::vector<uint8_t>& data) {
 
 std::pair<Result, std::string> WebSocketClientLite::receiveMessage() {
     if (!m_connected || !m_socket) {
-        return {Result(ERROR_CODE::INVALID_PARAMETER, "Not connected"), ""};
+        return {Result(ErrorCode::invalidParameter, "Not connected"), ""};
     }
     
     auto receiveResult = m_socket->receive(4096);
@@ -212,13 +212,13 @@ void WebSocketClientLite::processMessages() {
     auto receiveResult = m_socket->receive(4096);
     if (!receiveResult.first.isSuccess()) {
         Result error = receiveResult.first;
-        if (error.getErrorCode() == ERROR_CODE::WEBSOCKET_CONNECTION_CLOSED) {
+        if (error.getErrorCode() == ErrorCode::websocketConnectionClosed) {
             m_connected = false;
             std::cout << "🔌 Server closed connection" << std::endl;
             if (m_onDisconnect) {
                 m_onDisconnect();
             }
-        } else if (error.getErrorCode() == ERROR_CODE::SOCKET_RECEIVE_FAILED) {
+        } else if (error.getErrorCode() == ErrorCode::socketReceiveFailed) {
             // Check if it's just a non-blocking "would block" situation
             int systemError = error.getSystemErrorCode();
 #ifdef _WIN32
@@ -284,11 +284,11 @@ Result WebSocketClientLite::performWebSocketHandshake() {
     
     // Validate handshake response
     if (response.find("HTTP/1.1 101") == std::string::npos) {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Invalid handshake response");
+        return Result(ErrorCode::websocketHandshakeFailed, "Invalid handshake response");
     }
     
     if (response.find("Upgrade: websocket") == std::string::npos) {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Missing Upgrade header");
+        return Result(ErrorCode::websocketHandshakeFailed, "Missing Upgrade header");
     }
     
     return Result();
@@ -296,7 +296,7 @@ Result WebSocketClientLite::performWebSocketHandshake() {
 
 Result WebSocketClientLite::sendWebSocketFrame(const std::vector<uint8_t>& data, int opcode) {
     if (!m_socket) {
-        return Result(ERROR_CODE::INVALID_PARAMETER, "No socket available");
+        return Result(ErrorCode::invalidParameter, "No socket available");
     }
     
     // Simple WebSocket frame construction
@@ -314,7 +314,7 @@ Result WebSocketClientLite::sendWebSocketFrame(const std::vector<uint8_t>& data,
         frame.push_back(static_cast<uint8_t>(data.size() & 0xFF));
     } else {
         // Not supporting very large frames in this simple implementation
-        return Result(ERROR_CODE::WEBSOCKET_PAYLOAD_TOO_LARGE, "Payload too large");
+        return Result(ErrorCode::websocketPayloadTooLarge, "Payload too large");
     }
     
     // Payload

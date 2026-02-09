@@ -25,6 +25,15 @@
 
 namespace WebSocket {
 
+// Platform-specific types
+#ifdef _WIN32
+using SOCKET_TYPE_NATIVE = SOCKET;
+static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = INVALID_SOCKET;
+#else
+using SOCKET_TYPE_NATIVE = int;
+static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = -1;
+#endif
+
 // Type aliases for cleaner code
 using AcceptResult = std::pair<Result, std::unique_ptr<Socket>>;
 using SendResult = std::pair<Result, size_t>;
@@ -49,7 +58,7 @@ public:
     Socket& operator=(Socket&& other) noexcept;
 
     // Socket creation and configuration
-    Result create(SOCKET_FAMILY family, SOCKET_TYPE type);
+    Result create(socketFamily family, socketType type);
     Result bind(const std::string& address, uint16_t port);
     Result listen(int backlog = 128);
     std::pair<Result, std::unique_ptr<Socket>> accept();
@@ -110,15 +119,6 @@ public:
     void errorCallback(ErrorCallbackFn callback);
 
 private:
-    // Platform-specific types (internal only)
-    #ifdef _WIN32
-    using SOCKET_TYPE_NATIVE = SOCKET;
-    static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = INVALID_SOCKET;
-    #else
-    using SOCKET_TYPE_NATIVE = int;
-    static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = -1;
-    #endif
-
     // Private constructor for internal use (e.g., Accept)
     explicit Socket(SOCKET_TYPE_NATIVE nativeSocket);
 

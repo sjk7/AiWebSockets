@@ -5,26 +5,50 @@
 #include <string>
 #include <cstdint>
 #include <memory>
-#include "ErrorCodes.h"
 
 namespace WebSocket {
+
+// Core error codes for the WebSocket library
+enum class ErrorCode {
+    success = 0,
+    socketCreateFailed,
+    socketBindFailed,
+    socketListenFailed,
+    socketAcceptFailed,
+    socketConnectFailed,
+    socketSendFailed,
+    socketReceiveFailed,
+    socketSetOptionFailed,
+    socketGetSocknameFailed,
+    socketAddressParseFailed,
+    invalidParameter,
+    memoryAllocationFailed,
+    websocketHandshakeFailed,
+    websocketFrameParseFailed,
+    websocketInvalidOpcode,
+    websocketPayloadTooLarge,
+    websocketConnectionClosed,
+    threadCreationFailed,
+    unknownError
+};
 
 // Forward declarations
 class Socket;
 class WebSocketConnection;
+class Result;
 
 // Enum classes with proper casing
-enum class SOCKET_TYPE {
+enum class socketType {
     TCP,
     UDP
 };
 
-enum class SOCKET_FAMILY {
+enum class socketFamily {
     IPV4,
     IPV6
 };
 
-enum class WEBSOCKET_OPCODE {
+enum class websocketOpcode {
     CONTINUATION = 0x0,
     TEXT = 0x1,
     BINARY = 0x2,
@@ -33,7 +57,7 @@ enum class WEBSOCKET_OPCODE {
     PONG = 0xA
 };
 
-enum class WEBSOCKET_STATE {
+enum class websocketState {
     CONNECTING,
     OPEN,
     CLOSING,
@@ -46,7 +70,7 @@ struct WebSocketFrame {
     bool Rsv1;
     bool Rsv2;
     bool Rsv3;
-    WEBSOCKET_OPCODE Opcode;
+    websocketOpcode Opcode;
     bool Masked;
     uint64_t PayloadLength;
     std::vector<uint8_t> MaskingKey;
@@ -54,17 +78,17 @@ struct WebSocketFrame {
 };
 
 struct WebSocketMessage {
-    WEBSOCKET_OPCODE Opcode;
+    websocketOpcode Opcode;
     std::vector<uint8_t> Data;
     
-    bool IsText() const { return Opcode == WEBSOCKET_OPCODE::TEXT; }
-    bool IsBinary() const { return Opcode == WEBSOCKET_OPCODE::BINARY; }
-    bool IsClose() const { return Opcode == WEBSOCKET_OPCODE::CLOSE; }
-    bool IsPing() const { return Opcode == WEBSOCKET_OPCODE::PING; }
-    bool IsPong() const { return Opcode == WEBSOCKET_OPCODE::PONG; }
+    bool isText() const { return Opcode == websocketOpcode::TEXT; }
+    bool isBinary() const { return Opcode == websocketOpcode::BINARY; }
+    bool isClose() const { return Opcode == websocketOpcode::CLOSE; }
+    bool isPing() const { return Opcode == websocketOpcode::PING; }
+    bool isPong() const { return Opcode == websocketOpcode::PONG; }
     
-    std::string AsText() const {
-        return IsText() ? std::string(Data.begin(), Data.end()) : std::string();
+    std::string asText() const {
+        return isText() ? std::string(Data.begin(), Data.end()) : std::string();
     }
 };
 

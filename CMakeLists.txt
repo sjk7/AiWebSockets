@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 project(aiWebSockets VERSION 1.0.0 LANGUAGES CXX)
 
+# Export compile commands for IDE IntelliSense support
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Fix timestamp warnings by setting CMake policies
 if(POLICY CMP0115)
     cmake_policy(SET CMP0115 NEW)  # Source file extensions must be explicit

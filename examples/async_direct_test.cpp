@@ -24,30 +24,30 @@ int main() {
         for (int i = 0; i < numTests; i++) {
             // Create server
             Socket server;
-            server.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
-            server.Bind("127.0.0.1", 0);
-            server.Listen(1);
-            uint16_t port = server.LocalPort();
+            server.create(socketFamily::IPV4, socketType::TCP);
+            server.bind("127.0.0.1", 0);
+            server.listen(1);
+            uint16_t port = server.localPort();
             
             // Create client
             Socket client;
-            client.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
-            client.Connect("127.0.0.1", port);
+            client.create(socketFamily::IPV4, socketType::TCP);
+            client.connect("127.0.0.1", port);
             
-            auto [acceptResult, accepted] = server.Accept();
+            auto [acceptResult, accepted] = server.accept();
             
-            if (acceptResult.IsSuccess() && accepted) {
+            if (acceptResult.isSuccess() && accepted) {
                 auto start = high_resolution_clock::now();
                 
                 // Synchronous send
-                client.Send(testData);
+                client.send(testData);
                 
                 // Synchronous receive
                 std::vector<uint8_t> received;
                 size_t total = 0;
                 while (total < dataSize) {
-                    auto [result, chunk] = accepted->Receive(4096);
-                    if (result.IsError() || chunk.empty()) break;
+                    auto [result, chunk] = accepted->receive(4096);
+                    if (result.isError() || chunk.empty()) break;
                     received.insert(received.end(), chunk.begin(), chunk.end());
                     total += chunk.size();
                 }
@@ -56,9 +56,9 @@ int main() {
                 totalTime += duration_cast<microseconds>(end - start).count();
             }
             
-            client.Close();
-            accepted->Close();
-            server.Close();
+            client.close();
+            accepted->close();
+            server.close();
         }
         
         double avgTime = totalTime / numTests;
@@ -77,34 +77,34 @@ int main() {
         for (int i = 0; i < numTests; i++) {
             // Create server
             Socket server;
-            server.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
-            server.Bind("127.0.0.1", 0);
-            server.Listen(1);
-            uint16_t port = server.LocalPort();
+            server.create(socketFamily::IPV4, socketType::TCP);
+            server.bind("127.0.0.1", 0);
+            server.listen(1);
+            uint16_t port = server.localPort();
             
             // Create client
             Socket client;
-            client.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
-            client.EnableAsyncIO(); // Enable async I/O
-            client.Connect("127.0.0.1", port);
+            client.create(socketFamily::IPV4, socketType::TCP);
+            client.enableAsyncIO(); // Enable async I/O
+            client.connect("127.0.0.1", port);
             
-            auto [acceptResult, accepted] = server.Accept();
+            auto [acceptResult, accepted] = server.accept();
             if (accepted) {
-                accepted->EnableAsyncIO(); // Enable async I/O
+                accepted->enableAsyncIO(); // Enable async I/O
             }
             
-            if (acceptResult.IsSuccess() && accepted) {
+            if (acceptResult.isSuccess() && accepted) {
                 auto start = high_resolution_clock::now();
                 
                 // Asynchronous send
-                auto sendResult = client.SendAsync(testData);
+                auto sendResult = client.sendAsync(testData);
                 
                 // Asynchronous receive
                 std::vector<uint8_t> received;
                 size_t total = 0;
                 while (total < dataSize) {
-                    auto [result, chunk] = accepted->Receive(4096);
-                    if (result.IsError() || chunk.empty()) break;
+                    auto [result, chunk] = accepted->receive(4096);
+                    if (result.isError() || chunk.empty()) break;
                     received.insert(received.end(), chunk.begin(), chunk.end());
                     total += chunk.size();
                 }
@@ -113,9 +113,9 @@ int main() {
                 totalTime += duration_cast<microseconds>(end - start).count();
             }
             
-            client.Close();
-            accepted->Close();
-            server.Close();
+            client.close();
+            accepted->close();
+            server.close();
         }
         
         double avgTime = totalTime / numTests;

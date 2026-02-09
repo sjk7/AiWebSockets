@@ -97,7 +97,7 @@ namespace WebSocket {
 		WSADATA wsaData;
 		int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
 		if (result != 0) {
-			return Result(ERROR_CODE::SOCKET_CREATE_FAILED, "WSAStartup failed: " + std::to_string(result));
+			return Result(ErrorCode::socketCreateFailed, "WSAStartup failed: " + std::to_string(result));
 		}
 		return Result();
 #else
@@ -111,9 +111,9 @@ namespace WebSocket {
 #endif
 	}
 
-	Result Socket::create(SOCKET_FAMILY family, SOCKET_TYPE type) {
+	Result Socket::create(socketFamily family, socketType type) {
 		if (valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket already created");
+			return Result(ErrorCode::invalidParameter, "Socket already created");
 		}
 
 		// Automatic socket system initialization - thread-safe with reference counting
@@ -130,13 +130,13 @@ namespace WebSocket {
 			}
 		}
 
-		int af = (family == SOCKET_FAMILY::IPV4) ? AF_INET : AF_INET6;
-		int sockType = (type == SOCKET_TYPE::TCP) ? SOCK_STREAM : SOCK_DGRAM;
-		int protocol = (type == SOCKET_TYPE::TCP) ? IPPROTO_TCP : IPPROTO_UDP;
+		int af = (family == socketFamily::IPV4) ? AF_INET : AF_INET6;
+		int sockType = (type == socketType::TCP) ? SOCK_STREAM : SOCK_DGRAM;
+		int protocol = (type == socketType::TCP) ? IPPROTO_TCP : IPPROTO_UDP;
 
 		m_socket = socket(af, sockType, protocol);
 		if (m_socket == INVALID_SOCKET_NATIVE) {
-			return Result(ERROR_CODE::SOCKET_CREATE_FAILED, getLastSystemErrorCode());
+			return Result(ErrorCode::socketCreateFailed, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -144,7 +144,7 @@ namespace WebSocket {
 
 	Result Socket::bind(const std::string& address, uint16_t port) {
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
 		// Determine if this is IPv6 or IPv4
@@ -161,7 +161,7 @@ namespace WebSocket {
 				addr6.sin6_addr = in6addr_any;
 			} else {
 				if (inet_pton(AF_INET6, address.c_str(), &addr6.sin6_addr) != 1) {
-					return Result(ERROR_CODE::INVALID_PARAMETER, "Invalid IPv6 address: " + address);
+					return Result(ErrorCode::invalidParameter, "Invalid IPv6 address: " + address);
 				}
 			}
 			
@@ -172,9 +172,9 @@ namespace WebSocket {
 				if (systemError.find("address already in use") != std::string::npos || 
 					systemError.find("Only one usage of each socket address") != std::string::npos) {
 					std::string portError = "Port " + std::to_string(port) + " is already in use. " + systemError;
-					return Result(ERROR_CODE::SOCKET_BIND_FAILED, portError);
+					return Result(ErrorCode::socketBindFailed, portError);
 				}
-				return Result(ERROR_CODE::SOCKET_BIND_FAILED, systemErrorCode);
+				return Result(ErrorCode::socketBindFailed, systemErrorCode);
 			}
 		} else {
 			// IPv4 binding (default)
@@ -188,7 +188,7 @@ namespace WebSocket {
 			}
 			else {
 				if (inet_pton(AF_INET, address.c_str(), &addr.sin_addr) != 1) {
-					return Result(ERROR_CODE::INVALID_PARAMETER, "Invalid IPv4 address: " + address);
+					return Result(ErrorCode::invalidParameter, "Invalid IPv4 address: " + address);
 				}
 			}
 
@@ -201,9 +201,9 @@ namespace WebSocket {
 					systemError.find("Only one usage of each socket address") != std::string::npos) {
 					// Custom message for port conflicts - this is cached immediately
 					std::string portError = "Port " + std::to_string(port) + " is already in use. " + systemError;
-					return Result(ERROR_CODE::SOCKET_BIND_FAILED, portError);
+					return Result(ErrorCode::socketBindFailed, portError);
 				}
-				return Result(ERROR_CODE::SOCKET_BIND_FAILED, systemErrorCode);
+				return Result(ErrorCode::socketBindFailed, systemErrorCode);
 			}
 		}
 
@@ -212,12 +212,12 @@ namespace WebSocket {
 
 	Result Socket::listen(int backlog) {
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
 		if (::listen(m_socket, backlog) != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_LISTEN_FAILED, getLastSystemErrorCode());
+			return Result(ErrorCode::socketListenFailed, getLastSystemErrorCode());
 		}
 
 		m_isListening = true;
@@ -226,7 +226,7 @@ namespace WebSocket {
 
 	AcceptResult Socket::accept() {
 		if (!valid()) {
-			return { Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created"), nullptr };
+			return { Result(ErrorCode::invalidParameter, "Socket not created"), nullptr };
 		}
 
 		// Use a large enough buffer for both IPv4 and IPv6 addresses
@@ -237,7 +237,7 @@ namespace WebSocket {
 		SOCKET_TYPE_NATIVE clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
 		if (clientSocket == INVALID_SOCKET_NATIVE) {
 			updateLastError();
-			const auto ret = Result(ERROR_CODE::SOCKET_ACCEPT_FAILED, getLastSystemErrorCode());
+			const auto ret = Result(ErrorCode::socketAcceptFailed, getLastSystemErrorCode());
 			return { ret, nullptr };
 		}
 
@@ -247,7 +247,7 @@ namespace WebSocket {
 
 	Result Socket::connect(const std::string& address, uint16_t port) {
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
 		struct sockaddr_in addr;
@@ -256,12 +256,12 @@ namespace WebSocket {
 		addr.sin_port = htons(port);
 
 		if (inet_pton(AF_INET, address.c_str(), &addr.sin_addr) != 1) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Invalid IPv4 address: " + address);
+			return Result(ErrorCode::invalidParameter, "Invalid IPv4 address: " + address);
 		}
 
 		if (::connect(m_socket, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_CONNECT_FAILED, getLastSystemErrorCode());
+			return Result(ErrorCode::socketConnectFailed, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -280,7 +280,7 @@ namespace WebSocket {
 
 		if (result == SOCKET_ERROR) {
 			updateLastError();
-			return Result(ERROR_CODE::UNKNOWN_ERROR, getLastSystemErrorCode());
+			return Result(ErrorCode::unknownError, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -314,7 +314,7 @@ namespace WebSocket {
 
 		if (result != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::UNKNOWN_ERROR, getLastSystemErrorCode());
+			return Result(ErrorCode::unknownError, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -322,11 +322,11 @@ namespace WebSocket {
 
 	SendResult Socket::sendRaw(const void* data, size_t length) {
 		if (!valid()) {
-			return { Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created"), 0 };
+			return { Result(ErrorCode::invalidParameter, "Socket not created"), 0 };
 		}
 
 		if (!data || length == 0) {
-			return { Result(ERROR_CODE::INVALID_PARAMETER, "Invalid data parameters"), 0 };
+			return { Result(ErrorCode::invalidParameter, "Invalid data parameters"), 0 };
 		}
 
 		size_t totalSent = 0;
@@ -341,7 +341,7 @@ namespace WebSocket {
 
 			if (result < 0) {
 				updateLastError();
-				return { Result(ERROR_CODE::SOCKET_SEND_FAILED, getLastSystemErrorCode()), totalSent };
+				return { Result(ErrorCode::socketSendFailed, getLastSystemErrorCode()), totalSent };
 			}
 
 			// Handle partial sends (result == 0 means connection closed)
@@ -360,11 +360,11 @@ namespace WebSocket {
 
 	std::pair<Result, std::vector<uint8_t>> Socket::receiveRaw(void* buffer, size_t bufferSize) {
 		if (!valid()) {
-			return { Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created"), {} };
+			return { Result(ErrorCode::invalidParameter, "Socket not created"), {} };
 		}
 
 		if (!buffer || bufferSize == 0) {
-			return { Result(ERROR_CODE::INVALID_PARAMETER, "Invalid buffer parameters"), {} };
+			return { Result(ErrorCode::invalidParameter, "Invalid buffer parameters"), {} };
 		}
 
 #ifdef _WIN32
@@ -375,7 +375,7 @@ namespace WebSocket {
 
 		if (result < 0) {
 			updateLastError();
-			return { Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, getLastSystemErrorCode()), {} };
+			return { Result(ErrorCode::socketReceiveFailed, getLastSystemErrorCode()), {} };
 		}
 
 		// result == 0 means connection closed gracefully
@@ -408,7 +408,7 @@ namespace WebSocket {
 
 	ReceiveResult Socket::receive(size_t maxLength, int timeoutMs) {
 		if (!valid()) {
-			return {Result(ERROR_CODE::INVALID_PARAMETER, "Socket is not valid"), {}};
+			return {Result(ErrorCode::invalidParameter, "Socket is not valid"), {}};
 		}
 
 		// Use select() to implement timeout
@@ -430,7 +430,7 @@ namespace WebSocket {
 
 		if (selectResult < 0) {
 			updateLastError();
-			return {Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, getLastSystemErrorCode()), {}};
+			return {Result(ErrorCode::socketReceiveFailed, getLastSystemErrorCode()), {}};
 		}
 
 		if (selectResult == 0) {
@@ -453,7 +453,7 @@ namespace WebSocket {
 
 	Result Socket::blocking(bool blocking) {
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
 #ifdef _WIN32
@@ -461,19 +461,19 @@ namespace WebSocket {
 		int result = ioctlsocket(m_socket, FIONBIO, &mode);
 		if (result != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, getLastSystemErrorCode());
+			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
 		}
 #else
 		int flags = fcntl(m_socket, F_GETFL, 0);
 		if (flags == -1) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, getLastSystemErrorCode());
+			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
 		}
 
 		int result = fcntl(m_socket, F_SETFL, blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK));
 		if (result == -1) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, getLastSystemErrorCode());
+			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
 		}
 #endif
 
@@ -811,12 +811,12 @@ namespace WebSocket {
 
 	Result Socket::setSocketOption(int level, int option, const void* value, size_t length) {
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
 		if (setsockopt(m_socket, level, option, (const char*)value, (int)length) != 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, getLastSystemErrorCode());
+			return Result(ErrorCode::socketSetOptionFailed, getLastSystemErrorCode());
 		}
 
 		return Result();
@@ -824,7 +824,7 @@ namespace WebSocket {
 
 	Result Socket::getSocketOption(int level, int option, void* value, size_t* length) const {
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
 		socklen_t len = (socklen_t)*length;
@@ -832,7 +832,7 @@ namespace WebSocket {
 			// Note: UpdateLastError is not const, so we handle error differently here
 			int systemErrorCode = getLastSystemErrorCode();
 			printf("Socket getsockopt error: %s\n", getSystemErrorMessage(systemErrorCode).c_str());
-			return Result(ERROR_CODE::SOCKET_SET_OPTION_FAILED, systemErrorCode);
+			return Result(ErrorCode::socketSetOptionFailed, systemErrorCode);
 		}
 
 		*length = len;
@@ -868,7 +868,7 @@ namespace WebSocket {
 
 	std::pair<Result, std::pair<std::string, uint16_t>> Socket::getSocketAddress() const {
 		if (!valid()) {
-			return { Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created"), {"", 0} };
+			return { Result(ErrorCode::invalidParameter, "Socket not created"), {"", 0} };
 		}
 
 		struct sockaddr addr;
@@ -885,12 +885,12 @@ namespace WebSocket {
 #else
 			std::string errorMsg = strerror(errno);
 #endif
-			return { Result(ERROR_CODE::SOCKET_GETSOCKNAME_FAILED, errorMsg), {"", 0} };
+			return { Result(ErrorCode::socketGetSocknameFailed, errorMsg), {"", 0} };
 		}
 
 		std::pair<std::string, uint16_t> address = getSocketAddress(&addr);
 		if (address.first.empty()) {
-			return { Result(ERROR_CODE::SOCKET_ADDRESS_PARSE_FAILED, "Failed to parse socket address"), {"", 0} };
+			return { Result(ErrorCode::socketAddressParseFailed, "Failed to parse socket address"), {"", 0} };
 		}
 
 		return { Result(), address };
@@ -901,11 +901,11 @@ namespace WebSocket {
 		std::lock_guard<std::mutex> lock(m_eventLoopMutex);
 
 		if (m_eventLoopRunning.load()) {
-			return Result(ERROR_CODE::UNKNOWN_ERROR, "Event loop is already running");
+			return Result(ErrorCode::unknownError, "Event loop is already running");
 		}
 
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket is not valid");
+			return Result(ErrorCode::invalidParameter, "Socket is not valid");
 		}
 
 		m_eventLoopRunning.store(true);
@@ -953,7 +953,7 @@ namespace WebSocket {
 	// Async I/O Implementation
 	Result Socket::enableAsyncIO() {
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
 		if (m_asyncEnabled.load()) {
@@ -964,7 +964,7 @@ namespace WebSocket {
 		// Create I/O Completion Port
 		m_completionPort = CreateIoCompletionPort((HANDLE)m_socket, nullptr, (ULONG_PTR)this, 0);
 		if (m_completionPort == nullptr) {
-			return Result(ERROR_CODE::UNKNOWN_ERROR, "Failed to create completion port");
+			return Result(ErrorCode::unknownError, "Failed to create completion port");
 		}
 
 		// Initialize overlapped structures
@@ -975,7 +975,7 @@ namespace WebSocket {
 		// Create epoll instance
 		m_epollFd = epoll_create1(0);
 		if (m_epollFd == -1) {
-			return Result(ERROR_CODE::UNKNOWN_ERROR, "Failed to create epoll instance");
+			return Result(ErrorCode::unknownError, "Failed to create epoll instance");
 		}
 
 		// Add socket to epoll
@@ -986,7 +986,7 @@ namespace WebSocket {
 		if (epoll_ctl(m_epollFd, EPOLL_CTL_ADD, m_socket, &event) == -1) {
 			close(m_epollFd);
 			m_epollFd = -1;
-			return Result(ERROR_CODE::UNKNOWN_ERROR, "Failed to add socket to epoll");
+			return Result(ErrorCode::unknownError, "Failed to add socket to epoll");
 		}
 #endif
 
@@ -996,15 +996,15 @@ namespace WebSocket {
 
 	Result Socket::sendAsync(const std::vector<uint8_t>& data) {
 		if (!m_asyncEnabled.load()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Async I/O not enabled");
+			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
 		}
 
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
 		if (data.empty()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "No data to send");
+			return Result(ErrorCode::invalidParameter, "No data to send");
 		}
 
 #ifdef _WIN32
@@ -1019,7 +1019,7 @@ namespace WebSocket {
 		if (result == SOCKET_ERROR) {
 			int error = WSAGetLastError();
 			if (error != WSA_IO_PENDING) {
-				return Result(ERROR_CODE::SOCKET_SEND_FAILED, "WSASend failed");
+				return Result(ErrorCode::socketSendFailed, "WSASend failed");
 			}
 			// Operation is pending - will complete asynchronously
 		}
@@ -1030,7 +1030,7 @@ namespace WebSocket {
 
 		if (result == -1) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				return Result(ERROR_CODE::SOCKET_SEND_FAILED, "Async send failed");
+				return Result(ErrorCode::socketSendFailed, "Async send failed");
 			}
 			// Would block - operation will complete asynchronously
 		}
@@ -1041,15 +1041,15 @@ namespace WebSocket {
 
 	Result Socket::receiveAsync(size_t maxLength) {
 		if (!m_asyncEnabled.load()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Async I/O not enabled");
+			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
 		}
 
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket not created");
+			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
 		if (maxLength == 0) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Invalid max length");
+			return Result(ErrorCode::invalidParameter, "Invalid max length");
 		}
 
 #ifdef _WIN32
@@ -1068,7 +1068,7 @@ namespace WebSocket {
 		if (result == SOCKET_ERROR) {
 			int error = WSAGetLastError();
 			if (error != WSA_IO_PENDING) {
-				return Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, "WSARecv failed");
+				return Result(ErrorCode::socketReceiveFailed, "WSARecv failed");
 			}
 			// Operation is pending - will complete asynchronously
 		}
@@ -1082,7 +1082,7 @@ namespace WebSocket {
 
 		if (result == -1) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				return Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, "Async receive failed");
+				return Result(ErrorCode::socketReceiveFailed, "Async receive failed");
 			}
 			// Would block - operation will complete asynchronously
 		}
@@ -1112,7 +1112,7 @@ namespace WebSocket {
 
 	Result Socket::processSocketEvents() {
 		if (!valid()) {
-			return Result(ERROR_CODE::INVALID_PARAMETER, "Socket is not valid");
+			return Result(ErrorCode::invalidParameter, "Socket is not valid");
 		}
 
 		// Use select() to check for socket events
@@ -1139,7 +1139,7 @@ namespace WebSocket {
 
 		if (selectResult < 0) {
 			updateLastError();
-			return Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, getLastSystemErrorCode());
+			return Result(ErrorCode::socketReceiveFailed, getLastSystemErrorCode());
 		}
 
 		if (selectResult == 0) {
@@ -1203,7 +1203,7 @@ namespace WebSocket {
 		else if (result == 0) {
 			// Connection closed
 			if (m_errorCallback) {
-				m_errorCallback(Result(ERROR_CODE::WEBSOCKET_CONNECTION_CLOSED, "Connection closed by peer"));
+				m_errorCallback(Result(ErrorCode::websocketConnectionClosed, "Connection closed by peer"));
 			}
 		}
 		else {
@@ -1212,7 +1212,7 @@ namespace WebSocket {
 			if (errorCode != WSAEWOULDBLOCK) {
 				updateLastError();
 				if (m_errorCallback) {
-					m_errorCallback(Result(ERROR_CODE::SOCKET_RECEIVE_FAILED, getLastSystemErrorCode()));
+					m_errorCallback(Result(ErrorCode::socketReceiveFailed, getLastSystemErrorCode()));
 				}
 			}
 		}

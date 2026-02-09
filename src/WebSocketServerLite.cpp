@@ -96,7 +96,7 @@ Result WebSocketServerLite::stop() {
 
 Result WebSocketServerLite::startNonBlocking() {
     if (m_running) {
-        return Result(ERROR_CODE::INVALID_PARAMETER, "Server is already running");
+        return Result(ErrorCode::invalidParameter, "Server is already running");
     }
     
     auto initResult = initializeServer();
@@ -147,19 +147,19 @@ int WebSocketServerLite::getCurrentConnectionCount() const {
 Result WebSocketServerLite::initializeServer() {
     // Check if port is available
     if (!Socket::isPortAvailable(m_port, m_bindAddress)) {
-        return Result(ERROR_CODE::SOCKET_BIND_FAILED, "Port " + std::to_string(m_port) + " is already in use");
+        return Result(ErrorCode::socketBindFailed, "Port " + std::to_string(m_port) + " is already in use");
     }
     
     // Create server socket
     m_serverSocket = std::make_unique<Socket>();
     
     // Determine socket family based on bind address
-    SOCKET_FAMILY family = SOCKET_FAMILY::IPV4; // default
+    socketFamily family = socketFamily::IPV4; // default
     if (Socket::isIPv6Address(m_bindAddress) || m_bindAddress == "::") {
-        family = SOCKET_FAMILY::IPV6;
+        family = socketFamily::IPV6;
     }
     
-    auto createResult = m_serverSocket->create(family, SOCKET_TYPE::TCP);
+    auto createResult = m_serverSocket->create(family, socketType::TCP);
     if (!createResult.isSuccess()) {
         m_serverSocket.reset();
         return createResult;
@@ -249,7 +249,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
                 }
             } else {
                 Result error = receiveResult.first;
-                if (error.getErrorCode() == ERROR_CODE::SOCKET_RECEIVE_FAILED) {
+                if (error.getErrorCode() == ErrorCode::socketReceiveFailed) {
                     // Non-blocking receive would normally return "would block" - check if it's a real error
                     int systemError = error.getSystemErrorCode();
 #ifdef _WIN32
@@ -297,9 +297,9 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
             auto receiveResult = clientSocket->receive(4096);
             if (!receiveResult.first.isSuccess()) {
                 Result error = receiveResult.first;
-                if (error.getErrorCode() == ERROR_CODE::WEBSOCKET_CONNECTION_CLOSED) {
+                if (error.getErrorCode() == ErrorCode::websocketConnectionClosed) {
                     break; // Normal closure
-                } else if (error.getErrorCode() == ERROR_CODE::SOCKET_RECEIVE_FAILED) {
+                } else if (error.getErrorCode() == ErrorCode::socketReceiveFailed) {
                     // Check if it's just a non-blocking "would block" situation
                     int systemError = error.getSystemErrorCode();
 #ifdef _WIN32

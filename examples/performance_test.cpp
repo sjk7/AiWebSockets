@@ -61,11 +61,11 @@ private:
         TestResult result{"", dataSize, 0.0, 0.0, 0.0, false};
         
         // Create test data
-        std::vector<uint8_t> testData = WebSocket::CreateTestData(dataSize);
+        std::vector<uint8_t> testData = WebSocket::createTestData(dataSize);
         
         // Setup server and client
         Socket serverSocket, clientSocket;
-        if (!serverSocket.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP).IsSuccess()) {
+        if (!serverSocket.Create(socketFamily::IPV4, socketType::TCP).IsSuccess()) {
             return result;
         }
         if (!serverSocket.ReuseAddress(true).IsSuccess()) {
@@ -86,7 +86,7 @@ private:
         std::string serverAddress = serverSocket.LocalAddress();
         uint16_t serverPort = serverSocket.LocalPort();
         
-        if (!clientSocket.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP).IsSuccess()) {
+        if (!clientSocket.Create(socketFamily::IPV4, socketType::TCP).IsSuccess()) {
             return result;
         }
         
@@ -314,11 +314,11 @@ private:
         TestResult result{"", dataSize * 2, 0.0, 0.0, 0.0, false}; // *2 for bidirectional
         
         // Create test data
-        std::vector<uint8_t> testData = WebSocket::CreateTestData(dataSize);
+        std::vector<uint8_t> testData = WebSocket::createTestData(dataSize);
         
         // Setup server and client
         Socket serverSocket, clientSocket;
-        serverSocket.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
+        serverSocket.Create(socketFamily::IPV4, socketType::TCP);
         serverSocket.ReuseAddress(true);
         serverSocket.Bind("127.0.0.1", 0);
         serverSocket.Listen(5);
@@ -326,7 +326,7 @@ private:
         std::string serverAddress = serverSocket.LocalAddress();
         uint16_t serverPort = serverSocket.LocalPort();
         
-        clientSocket.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
+        clientSocket.Create(socketFamily::IPV4, socketType::TCP);
         clientSocket.Connect(serverAddress, serverPort);
         
         auto acceptPair = serverSocket.Accept();
@@ -435,7 +435,7 @@ private:
         
         // Create server socket
         Socket serverSocket;
-        if (!serverSocket.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP).IsSuccess()) {
+        if (!serverSocket.Create(socketFamily::IPV4, socketType::TCP).IsSuccess()) {
             return result;
         }
         if (!serverSocket.ReuseAddress(true).IsSuccess()) {
@@ -459,7 +459,7 @@ private:
         uint16_t serverPort = serverSocket.LocalPort();
         
         // Create test data
-        std::vector<uint8_t> testData = WebSocket::CreateTestData(dataSize);
+        std::vector<uint8_t> testData = WebSocket::createTestData(dataSize);
         
         std::vector<std::unique_ptr<Socket>> clients;
         std::vector<std::thread> clientThreads;
@@ -474,7 +474,7 @@ private:
                 auto threadStart = std::chrono::high_resolution_clock::now();
                 
                 Socket clientSocket;
-                if (!clientSocket.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP).IsSuccess()) {
+                if (!clientSocket.Create(socketFamily::IPV4, socketType::TCP).IsSuccess()) {
                     return;
                 }
                 

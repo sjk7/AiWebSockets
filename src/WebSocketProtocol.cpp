@@ -104,7 +104,7 @@ Result WebSocketProtocol::validateHandshakeRequest(const std::string& request, H
     // Parse request line
     size_t lineEnd = request.find("\r\n");
     if (lineEnd == std::string::npos) {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Invalid HTTP request format");
+        return Result(ErrorCode::websocketHandshakeFailed, "Invalid HTTP request format");
     }
     
     std::string requestLine = request.substr(0, lineEnd);
@@ -112,15 +112,15 @@ Result WebSocketProtocol::validateHandshakeRequest(const std::string& request, H
     std::string method, path, version;
     
     if (!(ss >> method >> path >> version)) {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Invalid request line");
+        return Result(ErrorCode::websocketHandshakeFailed, "Invalid request line");
     }
     
     if (method != "GET") {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Only GET method allowed");
+        return Result(ErrorCode::websocketHandshakeFailed, "Only GET method allowed");
     }
     
     if (version != "HTTP/1.1") {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Only HTTP/1.1 supported");
+        return Result(ErrorCode::websocketHandshakeFailed, "Only HTTP/1.1 supported");
     }
     
     // Parse headers
@@ -153,27 +153,27 @@ Result WebSocketProtocol::validateHandshakeRequest(const std::string& request, H
             
             if (lowerName == "upgrade") {
                 if (value != "websocket") {
-                    return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Invalid Upgrade value");
+                    return Result(ErrorCode::websocketHandshakeFailed, "Invalid Upgrade value");
                 }
                 hasUpgrade = true;
             }
             else if (lowerName == "connection") {
                 // Connection header can contain multiple values (e.g., "Upgrade, keep-alive")
                 if (value.find("Upgrade") == std::string::npos) {
-                    return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Connection must include Upgrade");
+                    return Result(ErrorCode::websocketHandshakeFailed, "Connection must include Upgrade");
                 }
                 hasConnection = true;
             }
             else if (lowerName == "sec-websocket-key") {
                 if (value.empty() || value.length() < 16) {
-                    return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Invalid Sec-WebSocket-Key");
+                    return Result(ErrorCode::websocketHandshakeFailed, "Invalid Sec-WebSocket-Key");
                 }
                 info.Key = value;
                 hasKey = true;
             }
             else if (lowerName == "sec-websocket-version") {
                 if (value != "13") {
-                    return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Unsupported WebSocket version");
+                    return Result(ErrorCode::websocketHandshakeFailed, "Unsupported WebSocket version");
                 }
                 info.Version = value;
                 hasVersion = true;
@@ -220,19 +220,19 @@ Result WebSocketProtocol::validateHandshakeRequest(const std::string& request, H
     
     // Validate required headers
     if (!hasUpgrade) {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Missing Upgrade header");
+        return Result(ErrorCode::websocketHandshakeFailed, "Missing Upgrade header");
     }
     
     if (!hasConnection) {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Missing Connection header");
+        return Result(ErrorCode::websocketHandshakeFailed, "Missing Connection header");
     }
     
     if (!hasKey) {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Missing Sec-WebSocket-Key header");
+        return Result(ErrorCode::websocketHandshakeFailed, "Missing Sec-WebSocket-Key header");
     }
     
     if (!hasVersion) {
-        return Result(ERROR_CODE::WEBSOCKET_HANDSHAKE_FAILED, "Missing Sec-WebSocket-Version header");
+        return Result(ErrorCode::websocketHandshakeFailed, "Missing Sec-WebSocket-Version header");
     }
     
     return Result();
@@ -285,7 +285,7 @@ std::string WebSocketProtocol::negotiateSubProtocol(const std::vector<std::strin
 
 Result WebSocketProtocol::parseFrame(const std::vector<uint8_t>& data, WebSocketFrame& frame, size_t& bytesConsumed) {
     if (data.size() < 2) {
-        return Result(ERROR_CODE::WEBSOCKET_FRAME_PARSE_FAILED, "Frame too short");
+        return Result(ErrorCode::websocketFrameParseFailed, "Frame too short");
     }
     
     // Parse first byte
@@ -293,7 +293,7 @@ Result WebSocketProtocol::parseFrame(const std::vector<uint8_t>& data, WebSocket
     frame.Rsv1 = (data[0] & 0x40) != 0;
     frame.Rsv2 = (data[0] & 0x20) != 0;
     frame.Rsv3 = (data[0] & 0x10) != 0;
-    frame.Opcode = static_cast<WEBSOCKET_OPCODE>(data[0] & 0x0F);
+    frame.Opcode = static_cast<websocketOpcode>(data[0] & 0x0F);
     
     // Parse second byte
     frame.Masked = (data[1] & 0x80) != 0;
@@ -304,13 +304,13 @@ Result WebSocketProtocol::parseFrame(const std::vector<uint8_t>& data, WebSocket
     // Parse extended payload length
     if (payloadLen1 == 126) {
         if (data.size() < offset + 2) {
-            return Result(ERROR_CODE::WEBSOCKET_FRAME_PARSE_FAILED, "Incomplete extended payload length");
+            return Result(ErrorCode::websocketFrameParseFailed, "Incomplete extended payload length");
         }
         frame.PayloadLength = (static_cast<uint64_t>(data[offset]) << 8) | data[offset + 1];
         offset += 2;
     } else if (payloadLen1 == 127) {
         if (data.size() < offset + 8) {
-            return Result(ERROR_CODE::WEBSOCKET_FRAME_PARSE_FAILED, "Incomplete extended payload length");
+            return Result(ErrorCode::websocketFrameParseFailed, "Incomplete extended payload length");
         }
         frame.PayloadLength = 0;
         for (int i = 0; i < 8; i++) {
@@ -324,7 +324,7 @@ Result WebSocketProtocol::parseFrame(const std::vector<uint8_t>& data, WebSocket
     // Parse masking key (if present)
     if (frame.Masked) {
         if (data.size() < offset + 4) {
-            return Result(ERROR_CODE::WEBSOCKET_FRAME_PARSE_FAILED, "Incomplete masking key");
+            return Result(ErrorCode::websocketFrameParseFailed, "Incomplete masking key");
         }
         frame.MaskingKey.assign(data.begin() + offset, data.begin() + offset + 4);
         offset += 4;
@@ -334,7 +334,7 @@ Result WebSocketProtocol::parseFrame(const std::vector<uint8_t>& data, WebSocket
     
     // Parse payload data
     if (data.size() < offset + frame.PayloadLength) {
-        return Result(ERROR_CODE::WEBSOCKET_FRAME_PARSE_FAILED, "Incomplete payload data");
+        return Result(ErrorCode::websocketFrameParseFailed, "Incomplete payload data");
     }
     
     frame.PayloadData.assign(data.begin() + offset, data.begin() + offset + frame.PayloadLength);
@@ -405,7 +405,7 @@ WebSocketFrame WebSocketProtocol::createTextFrame(const std::string& text, bool 
     WebSocketFrame frame;
     frame.Fin = fin;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
-    frame.Opcode = WEBSOCKET_OPCODE::TEXT;
+    frame.Opcode = websocketOpcode::TEXT;
     frame.Masked = false;
     frame.PayloadLength = text.length();
     frame.PayloadData.assign(text.begin(), text.end());
@@ -416,7 +416,7 @@ WebSocketFrame WebSocketProtocol::createBinaryFrame(const std::vector<uint8_t>& 
     WebSocketFrame frame;
     frame.Fin = fin;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
-    frame.Opcode = WEBSOCKET_OPCODE::BINARY;
+    frame.Opcode = websocketOpcode::BINARY;
     frame.Masked = false;
     frame.PayloadLength = data.size();
     frame.PayloadData = data;
@@ -427,7 +427,7 @@ WebSocketFrame WebSocketProtocol::createPingFrame(const std::vector<uint8_t>& da
     WebSocketFrame frame;
     frame.Fin = true;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
-    frame.Opcode = WEBSOCKET_OPCODE::PING;
+    frame.Opcode = websocketOpcode::PING;
     frame.Masked = false;
     frame.PayloadLength = data.size();
     frame.PayloadData = data;
@@ -438,7 +438,7 @@ WebSocketFrame WebSocketProtocol::createPongFrame(const std::vector<uint8_t>& da
     WebSocketFrame frame;
     frame.Fin = true;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
-    frame.Opcode = WEBSOCKET_OPCODE::PONG;
+    frame.Opcode = websocketOpcode::PONG;
     frame.Masked = false;
     frame.PayloadLength = data.size();
     frame.PayloadData = data;
@@ -449,7 +449,7 @@ WebSocketFrame WebSocketProtocol::createCloseFrame(uint16_t code, const std::str
     WebSocketFrame frame;
     frame.Fin = true;
     frame.Rsv1 = frame.Rsv2 = frame.Rsv3 = false;
-    frame.Opcode = WEBSOCKET_OPCODE::CLOSE;
+    frame.Opcode = websocketOpcode::CLOSE;
     frame.Masked = false;
     
     frame.PayloadLength = 2 + reason.length();
@@ -460,14 +460,14 @@ WebSocketFrame WebSocketProtocol::createCloseFrame(uint16_t code, const std::str
     return frame;
 }
 
-bool WebSocketProtocol::isValidOpcode(WEBSOCKET_OPCODE opcode) {
+bool WebSocketProtocol::isValidOpcode(websocketOpcode opcode) {
     switch (opcode) {
-        case WEBSOCKET_OPCODE::CONTINUATION:
-        case WEBSOCKET_OPCODE::TEXT:
-        case WEBSOCKET_OPCODE::BINARY:
-        case WEBSOCKET_OPCODE::CLOSE:
-        case WEBSOCKET_OPCODE::PING:
-        case WEBSOCKET_OPCODE::PONG:
+        case websocketOpcode::CONTINUATION:
+        case websocketOpcode::TEXT:
+        case websocketOpcode::BINARY:
+        case websocketOpcode::CLOSE:
+        case websocketOpcode::PING:
+        case websocketOpcode::PONG:
             return true;
         default:
             return false;

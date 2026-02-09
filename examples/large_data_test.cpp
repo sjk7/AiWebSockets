@@ -185,7 +185,7 @@ int main() {
         
         // Phase 1: Client sends large data to server
         std::cout << "=== Phase 1: Client → Server (" << (CLIENT_SEND_SIZE / (1024 * 1024)) << " MB) ===" << std::endl;
-        auto clientSendData = WebSocket::CreateTestData(CLIENT_SEND_SIZE);
+        auto clientSendData = WebSocket::createTestData(CLIENT_SEND_SIZE);
         
         if (!SendDataInChunks(clientSocket, clientSendData, "Client")) {
             clientSocket.Close();
@@ -209,7 +209,7 @@ int main() {
         
         // Verify server reply integrity
         std::cout << "=== Phase 3: Client Verification ===" << std::endl;
-        if (WebSocket::VerifyDataIntegrity(clientReceivedData, SERVER_REPLY_SIZE)) {
+        if (WebSocket::verifyDataIntegrity(clientReceivedData, SERVER_REPLY_SIZE)) {
             std::cout << "✅ Client verified server reply data integrity - PASSED" << std::endl;
         } else {
             std::cout << "❌ Client verified server reply data integrity - FAILED" << std::endl;
@@ -246,7 +246,7 @@ int main() {
     
     // Phase 2: Server verifies client data integrity
     std::cout << "=== Phase 2: Server Verification ===" << std::endl;
-    bool clientDataIntegrity = WebSocket::VerifyDataIntegrity(serverReceivedData, CLIENT_SEND_SIZE);
+    bool clientDataIntegrity = WebSocket::verifyDataIntegrity(serverReceivedData, CLIENT_SEND_SIZE);
     
     if (clientDataIntegrity) {
         std::cout << "✅ Server verified client data integrity - PASSED" << std::endl;
@@ -257,7 +257,7 @@ int main() {
     
     // Phase 3: Server sends large reply to client
     std::cout << "=== Phase 3: Server Sending Reply ===" << std::endl;
-    auto serverReplyData = WebSocket::CreateTestData(SERVER_REPLY_SIZE);
+    auto serverReplyData = WebSocket::createTestData(SERVER_REPLY_SIZE);
     
     if (!SendDataInChunks(*acceptResult.second, serverReplyData, "Server")) {
         clientThread.join();
