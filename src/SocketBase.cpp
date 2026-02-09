@@ -4,6 +4,7 @@
 #include <memory>
 #include <cstring>
 #include <algorithm>
+#include <mutex>
 
 // All native socket headers are now included in OS.h
 
@@ -104,6 +105,31 @@ Result SocketBase::createNativeSocket(int family, int type, int protocol) {
     if (!m_impl) {
         return Result(ErrorCode::invalidParameter, "Socket implementation not initialized");
     }
+    
+#ifdef _WIN32
+    // Initialize Winsock if not already initialized
+    static bool wsaInitialized = false;
+    static std::mutex wsaMutex;
+    
+    if (!wsaInitialized) {
+        std::lock_guard<std::mutex> lock(wsaMutex);
+        if (!wsaInitialized) {
+            WSADATA wsaData;
+            int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+            if (result != 0) {
+                return Result(ErrorCode::socketCreateFailed, "WSAStartup failed: " + std::to_string(result));
+            }
+            wsaInitialized = true;
+            
+            // Register cleanup function to be called at program exit
+            static struct WSACleanupGuard {
+                ~WSACleanupGuard() {
+                    WSACleanup();
+                }
+            } cleanupGuard;
+        }
+    }
+#endif
     
     m_impl->socket = socket(family, type, protocol);
     if (m_impl->socket == 

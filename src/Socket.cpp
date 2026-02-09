@@ -629,7 +629,7 @@ Socket::~Socket() {
 		
 		return ipAddresses;
 	}
-
+	
 	Result Socket::setSocketOption(int level, int option, const void* value, size_t length) {
 		return setSocketOptionNative(level, option, value, length);
 	}

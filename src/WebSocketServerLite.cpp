@@ -5,6 +5,7 @@
 #include <chrono>
 #include <algorithm>
 #include <sstream>
+#include <winerror.h>
 
 namespace nob {
 
@@ -252,7 +253,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
                     // Non-blocking receive would normally return "would block" - check if it's a real error
                     int systemError = error.getSystemErrorCode();
 #ifdef _WIN32
-                    if (systemError != WSAEWOULDBLOCK) {
+                    if (systemError != SocketErrors::WOULD_BLOCK) {
 #else
                     if (systemError != EAGAIN && systemError != EWOULDBLOCK) {
 #endif
@@ -302,7 +303,7 @@ void WebSocketServerLite::handleClientConnection(std::unique_ptr<Socket> clientS
                     // Check if it's just a non-blocking "would block" situation
                     int systemError = error.getSystemErrorCode();
 #ifdef _WIN32
-                    if (systemError != WSAEWOULDBLOCK) {
+                    if (systemError != SocketErrors::WOULD_BLOCK) {
 #else
                     if (systemError != EAGAIN && systemError != EWOULDBLOCK) {
 #endif

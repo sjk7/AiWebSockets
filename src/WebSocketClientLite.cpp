@@ -70,7 +70,7 @@ Result WebSocketClientLite::connect() {
         // For non-blocking sockets, connect might return "in progress"
         int systemError = connectResult.getSystemErrorCode();
 #ifdef _WIN32
-        if (systemError != WSAEWOULDBLOCK) {
+        if (systemError != SocketErrors::WOULD_BLOCK) {
 #else
         if (systemError != EINPROGRESS) {
 #endif
@@ -105,7 +105,7 @@ Result WebSocketClientLite::connect() {
             if (handshakeResult.getErrorCode() == ErrorCode::socketReceiveFailed) {
                 int handshakeSystemError = handshakeResult.getSystemErrorCode();
 #ifdef _WIN32
-                if (handshakeSystemError != WSAEWOULDBLOCK && handshakeSystemError != WSAECONNREFUSED) {
+                if (handshakeSystemError != SocketErrors::WOULD_BLOCK && handshakeSystemError != SocketErrors::CONN_REFUSED) {
 #else
                 if (handshakeSystemError != EAGAIN && handshakeSystemError != EWOULDBLOCK && handshakeSystemError != ECONNREFUSED) {
 #endif
@@ -222,7 +222,7 @@ void WebSocketClientLite::processMessages() {
             // Check if it's just a non-blocking "would block" situation
             int systemError = error.getSystemErrorCode();
 #ifdef _WIN32
-            if (systemError != WSAEWOULDBLOCK) {
+            if (systemError != SocketErrors::WOULD_BLOCK) {
 #else
             if (systemError != EAGAIN && systemError != EWOULDBLOCK) {
 #endif

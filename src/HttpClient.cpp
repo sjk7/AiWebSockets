@@ -24,8 +24,8 @@ HttpClient::HttpClient() {
     m_headers["Accept"] = "*/*";
 }
 
-void HttpClient::setTimeout(int timeoutSeconds) {
-    m_timeoutSeconds = timeoutSeconds;
+void HttpClient::setTimeout(std::chrono::milliseconds timeout) {
+    m_timeout = timeout;
 }
 
 void HttpClient::setUserAgent(const std::string& userAgent) {
@@ -37,7 +37,7 @@ void HttpClient::setHeader(const std::string& name, const std::string& value) {
     m_headers[name] = value;
 }
 
-HttpClient::ParsedUrl HttpClient::parseUrl(const std::string& url) {
+HttpClient::ParsedUrl HttpClient::parseUrl(const std::string& url, Port defaultPort) {
     ParsedUrl parsed;
     
     // Default values
@@ -49,7 +49,13 @@ HttpClient::ParsedUrl HttpClient::parseUrl(const std::string& url) {
     if (schemeEnd != std::string::npos) {
         parsed.scheme = url.substr(0, schemeEnd);
         parsed.useHttps = (parsed.scheme == "https");
-        parsed.port = parsed.useHttps ? 443 : 80;
+        
+        // Use provided default port or scheme default
+        if (static_cast<int>(defaultPort) > 0) {
+            parsed.port = static_cast<int>(defaultPort);
+        } else {
+            parsed.port = parsed.useHttps ? static_cast<int>(Port::SSL_DEFAULT) : static_cast<int>(Port::HTTP_DEFAULT);
+        }
         
         size_t hostStart = schemeEnd + 3;
         size_t pathStart = url.find('/', hostStart);
@@ -66,6 +72,7 @@ HttpClient::ParsedUrl HttpClient::parseUrl(const std::string& url) {
         parsed.scheme = "http";
         parsed.host = url;
         parsed.path = "/";
+        parsed.port = (static_cast<int>(defaultPort) > 0) ? static_cast<int>(defaultPort) : static_cast<int>(Port::HTTP_DEFAULT);
     }
     
     // Handle port in host (e.g., "example.com:8080")
@@ -308,8 +315,8 @@ std::string HttpClient::urlEncode(const std::string& str) {
     return encoded;
 }
 
-HttpResponse HttpClient::get(const std::string& url, std::chrono::milliseconds timeout) {
-    ParsedUrl parsed = parseUrl(url);
+HttpResponse HttpClient::get(const std::string& url, Port port, std::chrono::milliseconds timeout) {
+    ParsedUrl parsed = parseUrl(url, port);
     
     // Update headers
     m_headers["Host"] = parsed.host;
@@ -324,9 +331,6 @@ HttpResponse HttpClient::get(const std::string& url, std::chrono::milliseconds t
     }
     
     std::string response = sendHttpRequest(request);
-    
-    // Close connection
-    closeNativeSocket();
     
     return parseResponse(response);
 }

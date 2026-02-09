@@ -23,9 +23,10 @@ This project is configured for optimal development in Windsorf with multiple bui
 - **vs2022-release** - Visual Studio 2022 release builds
 
 ### Build Directories:
-- `build-release/` - Ninja release builds (recommended)
+- `build-clean/` - Current working build directory (recommended)
 - `build-debug/` - Ninja debug builds
 - `build-vs2022/` - Visual Studio builds
+- `build-release/` - Legacy (do not use)
 - `build/` - Legacy (do not use)
 
 ## 🛠️ Common Tasks
@@ -37,19 +38,31 @@ cmake --build build-release --config Release
 
 ### Run Tests:
 ```bash
-./build-release/aiWebSocketsTests.exe
+ctest --test-dir build-clean
+```
+
+### Current Executable Targets:
+```bash
+# Compiler Firewall Check (runs on every build)
+./CompilerFirewallCheck.exe
+
+# HttpClient Test
+./HttpClientTest.exe
+
+# Core Library
+./aiWebSockets.lib
 ```
 
 ### Clean Build:
 ```bash
-cmake --build build-release --target clean
-cmake --build build-release --config Release
+cmake --build . --target clean
+cmake --build . --config Release
 ```
 
 ### Specific Targets:
 ```bash
 # Build just the tests
-cmake --build build-release --target aiWebSocketsTests
+cmake --build . --target aiWebSocketsTests
 
 # Build specific examples
 cmake --build build-release --target secure_server_example
@@ -86,7 +99,7 @@ aiWebSockets/
 │   ├── tasks.json        - Build tasks
 │   └── launch.json       - Debug configurations
 ├── CMakePresets.json     - CMake presets (NEW)
-├── build-release/        - Ninja release builds
+├── build-clean/        - Current working build directory
 ├── build-debug/          - Ninja debug builds  
 └── build-vs2022/         - VS2022 builds
 ```
@@ -100,11 +113,12 @@ aiWebSockets/
 
 ## 🚨 Important Notes
 
-- **Never use the `build/` directory** - it's legacy
-- **Prefer `build-release/` for daily development**
+- **Never use the `build/` or `build-release/` directories** - they're legacy
+- **Prefer `build-clean/` for daily development**
 - **Ninja is faster** than Visual Studio builds
-- **All executables are in `build-release/`**
+- **All executables are in `build-clean/`**
 - **CMakePresets.json** ensures consistent configuration
+- **CompilerFirewallCheck** runs automatically to verify abstraction integrity
 
 ## 🔗 Debugging
 

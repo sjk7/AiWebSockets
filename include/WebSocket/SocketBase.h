@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <string>
-#include <chrono>
 #include <cstdint>
 
 namespace nob {
@@ -25,6 +24,23 @@ constexpr int AF_INET_VALUE = 2;
 constexpr int SOCK_STREAM_VALUE = 1;
 constexpr int SOL_SOCKET_VALUE = 1;
 constexpr int SO_ERROR_VALUE = 100;
+
+// Common socket error codes (abstract compliant)
+namespace SocketErrors {
+#ifdef _WIN32
+    constexpr int WOULD_BLOCK = 10035;  // WSAEWOULDBLOCK
+    constexpr int IN_PROGRESS = 10036;  // WSAEINPROGRESS  
+    constexpr int CONN_REFUSED = 10061; // WSAECONNREFUSED
+    constexpr int CONN_RESET = 10054;   // WSAECONNRESET
+    constexpr int TIMED_OUT = 10060;     // WSAETIMEDOUT
+#else
+    constexpr int WOULD_BLOCK = 11;      // EAGAIN/EWOULDBLOCK
+    constexpr int IN_PROGRESS = 115;     // EINPROGRESS
+    constexpr int CONN_REFUSED = 111;    // ECONNREFUSED
+    constexpr int CONN_RESET = 104;      // ECONNRESET
+    constexpr int TIMED_OUT = 110;       // ETIMEDOUT
+#endif
+}
 
 // Constants for invalid sockets
 constexpr NativeSocketTypes::SocketType INVALID_SOCKET_NATIVE = 

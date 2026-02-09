@@ -8,6 +8,17 @@
 
 namespace nob {
 
+// Default timeout for HTTP requests
+constexpr std::chrono::milliseconds DEFAULT_HTTP_TIMEOUT{30000};
+
+// Port enumeration for type-safe port specification
+enum class Port : int {
+    HTTP_DEFAULT = 80,
+    SSL_DEFAULT = 443,
+    PROXY_DEFAULT = 8080,
+    LOCALHOST_DEFAULT = 3000
+};
+
 /**
  * @brief HTTP Response structure
  */
@@ -42,10 +53,10 @@ public:
     ~HttpClient() = default;
 
     /**
-     * @brief Set request timeout in seconds
-     * @param timeoutSeconds Timeout duration
+     * @brief Set request timeout in milliseconds
+     * @param timeout Timeout duration
      */
-    void setTimeout(int timeoutSeconds);
+    void setTimeout(std::chrono::milliseconds timeout);
 
     /**
      * @brief Set custom user agent
@@ -63,10 +74,11 @@ public:
     /**
      * @brief Perform HTTP GET request
      * @param url Target URL (e.g., "https://www.google.com")
-     * @param timeout Optional timeout (default: 30s)
+     * @param port Port to use for connection (default: HTTP_DEFAULT)
+     * @param timeout Optional timeout (default: DEFAULT_HTTP_TIMEOUT)
      * @return HTTP response
      */
-    HttpResponse get(const std::string& url, std::chrono::milliseconds timeout = std::chrono::milliseconds(30000));
+    HttpResponse get(const std::string& url, Port port = Port::HTTP_DEFAULT, std::chrono::milliseconds timeout = DEFAULT_HTTP_TIMEOUT);
 
     /**
      * @brief Perform HTTP POST request
@@ -95,10 +107,10 @@ protected:
         bool useHttps;
     };
 
-    virtual ParsedUrl parseUrl(const std::string& url);
+    virtual ParsedUrl parseUrl(const std::string& url, Port defaultPort = Port::HTTP_DEFAULT);
 
 private:
-    int m_timeoutSeconds = 30;
+    std::chrono::milliseconds m_timeout = DEFAULT_HTTP_TIMEOUT;
     std::string m_userAgent = "HttpClient/1.0";
     std::map<std::string, std::string> m_headers;
 
