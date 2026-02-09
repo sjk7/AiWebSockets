@@ -144,3 +144,26 @@ install(DIRECTORY include/
     DESTINATION include
     FILES_MATCHING PATTERN "*.h"
 )
+
+# Enable testing
+enable_testing()
+
+# Test executable
+add_executable(aiWebSocketsTests tests/main.cpp)
+target_link_libraries(aiWebSocketsTests aiWebSockets)
+
+# Add test to CTest
+add_test(NAME WebSocketLibraryTests COMMAND aiWebSocketsTests)
+
+# Additional test executables (when they have content)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/SocketTests.cpp")
+    add_executable(SocketTests tests/SocketTests.cpp)
+    target_link_libraries(SocketTests aiWebSockets)
+    add_test(NAME SocketTests COMMAND SocketTests)
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/WebSocketProtocolTests.cpp")
+    add_executable(WebSocketProtocolTests tests/WebSocketProtocolTests.cpp)
+    target_link_libraries(WebSocketProtocolTests aiWebSockets)
+    add_test(NAME WebSocketProtocolTests COMMAND WebSocketProtocolTests)
+endif()

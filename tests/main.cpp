@@ -108,21 +108,21 @@ void testSocketCreation() {
     
     // Test socket creation
     WebSocket::Socket socket;
-    testFramework::assert(!socket.valid(), "Socket is initially invalid");
+    testFramework::assert(!socket.isValid(), "Socket is initially invalid");
     
     WebSocket::Result createResult = socket.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP);
     testFramework::assert(createResult.isSuccess(), "IPv4 TCP socket creation");
-    testFramework::assert(socket.valid(), "Socket is valid after creation");
+    testFramework::assert(socket.isValid(), "Socket is valid after creation");
     
     // Test socket move constructor
     WebSocket::Socket movedSocket = std::move(socket);
-    testFramework::assert(!socket.valid(), "Original socket is invalid after move");
-    testFramework::assert(movedSocket.valid(), "Moved socket is valid");
+    testFramework::assert(!socket.isValid(), "Original socket is invalid after move");
+    testFramework::assert(movedSocket.isValid(), "Moved socket is valid");
     
     // Test socket cleanup
     WebSocket::Result closeResult = movedSocket.close();
     testFramework::assert(closeResult.isSuccess(), "Socket close");
-    testFramework::assert(!movedSocket.valid(), "Socket is invalid after close");
+    testFramework::assert(!movedSocket.isValid(), "Socket is invalid after close");
     
 
 }
@@ -317,19 +317,19 @@ void testWebSocketProtocol() {
     testFramework::assert(pongFrame.Opcode == WebSocket::websocketOpcode::PONG, "Pong frame has correct opcode");
     
     // Test close frame
-    WebSocket::WebSocketFrame closeFrame = WebSocket::WebSocketProtocol::createcloseFrame(1000, "Normal closure");
+    WebSocket::WebSocketFrame closeFrame = WebSocket::WebSocketProtocol::createCloseFrame(1000, "Normal closure");
     testFramework::assert(closeFrame.Opcode == WebSocket::websocketOpcode::CLOSE, "close frame has correct opcode");
     testFramework::assert(closeFrame.PayloadLength >= 2, "close frame has at least status code");
     
     // Test frame generation
-    std::vector<uint8_t> frameData = WebSocket::WebSocketProtocol::GenerateFrame(textFrame);
+    std::vector<uint8_t> frameData = WebSocket::WebSocketProtocol::generateFrame(textFrame);
     testFramework::assert(!frameData.empty(), "Frame generation produces data");
     testFramework::assert(frameData.size() >= 2, "Frame has minimum header size");
     
     // Test frame parsing
     WebSocket::WebSocketFrame parsedFrame;
     size_t bytesConsumed = 0;
-    WebSocket::Result parseResult = WebSocket::WebSocketProtocol::ParseFrame(frameData, parsedFrame, bytesConsumed);
+    WebSocket::Result parseResult = WebSocket::WebSocketProtocol::parseFrame(frameData, parsedFrame, bytesConsumed);
     testFramework::assert(parseResult.isSuccess(), "Frame parsing succeeds");
     testFramework::assert(bytesConsumed > 0, "Frame parsing consumes bytes");
     testFramework::assert(parsedFrame.Opcode == textFrame.Opcode, "Parsed frame has correct opcode");

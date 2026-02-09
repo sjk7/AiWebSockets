@@ -3,5 +3,23 @@
 
 #include "WebSocket/ErrorCodes.h"
 #include "WebSocket/Socket.h"
+#include <iostream>
 
-// Additional socket tests will be added here as needed
+int main() {
+    std::cout << "Running Socket Tests..." << std::endl;
+    
+    // Basic socket creation test
+    WebSocket::Socket socket;
+    auto result = socket.create(WebSocket::socketFamily::IPV4, WebSocket::socketType::TCP);
+    
+    if (result.isSuccess()) {
+        std::cout << "✅ Socket creation test passed" << std::endl;
+        socket.close();
+    } else {
+        std::cout << "❌ Socket creation test failed: " << result.getErrorMessage() << std::endl;
+        return 1;
+    }
+    
+    std::cout << "Socket tests completed successfully!" << std::endl;
+    return 0;
+}

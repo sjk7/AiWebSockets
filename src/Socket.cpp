@@ -63,7 +63,7 @@ namespace WebSocket {
 
 		// Only close if we haven't been closed already
 		// Close() will handle the reference counting
-		if (valid()) {
+		if (isValid()) {
 			close();
 		}
 		// Note: If socket was already closed, reference counting was already handled in Close()
@@ -112,7 +112,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::create(socketFamily family, socketType type) {
-		if (valid()) {
+		if (isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket already created");
 		}
 
@@ -143,7 +143,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::bind(const std::string& address, uint16_t port) {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
@@ -211,7 +211,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::listen(int backlog) {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
@@ -225,7 +225,7 @@ namespace WebSocket {
 	}
 
 	AcceptResult Socket::accept() {
-		if (!valid()) {
+		if (!isValid()) {
 			return { Result(ErrorCode::invalidParameter, "Socket not created"), nullptr };
 		}
 
@@ -246,7 +246,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::connect(const std::string& address, uint16_t port) {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
@@ -268,7 +268,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::shutdown() {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result();
 		}
 
@@ -287,7 +287,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::close() {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result();
 		}
 
@@ -321,7 +321,7 @@ namespace WebSocket {
 	}
 
 	SendResult Socket::sendRaw(const void* data, size_t length) {
-		if (!valid()) {
+		if (!isValid()) {
 			return { Result(ErrorCode::invalidParameter, "Socket not created"), 0 };
 		}
 
@@ -359,7 +359,7 @@ namespace WebSocket {
 	}
 
 	std::pair<Result, std::vector<uint8_t>> Socket::receiveRaw(void* buffer, size_t bufferSize) {
-		if (!valid()) {
+		if (!isValid()) {
 			return { Result(ErrorCode::invalidParameter, "Socket not created"), {} };
 		}
 
@@ -407,7 +407,7 @@ namespace WebSocket {
 	}
 
 	ReceiveResult Socket::receive(size_t maxLength, int timeoutMs) {
-		if (!valid()) {
+		if (!isValid()) {
 			return {Result(ErrorCode::invalidParameter, "Socket is not valid"), {}};
 		}
 
@@ -452,7 +452,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::blocking(bool blocking) {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
@@ -501,7 +501,7 @@ namespace WebSocket {
 		return setSocketOption(SOL_SOCKET, SO_RCVBUF, &value, sizeof(value));
 	}
 
-	bool Socket::valid() const {
+	bool Socket::isValid() const {
 		return m_socket != INVALID_SOCKET_NATIVE;
 	}
 
@@ -510,7 +510,7 @@ namespace WebSocket {
 	}
 
 	std::string Socket::localAddress() const {
-		if (!valid()) {
+		if (!isValid()) {
 			return "";
 		}
 
@@ -525,7 +525,7 @@ namespace WebSocket {
 	}
 
 	uint16_t Socket::localPort() const {
-		if (!valid()) {
+		if (!isValid()) {
 			return 0;
 		}
 
@@ -540,7 +540,7 @@ namespace WebSocket {
 	}
 
 	std::string Socket::remoteAddress() const {
-		if (!valid()) {
+		if (!isValid()) {
 			return "";
 		}
 
@@ -555,7 +555,7 @@ namespace WebSocket {
 	}
 
 	uint16_t Socket::remotePort() const {
-		if (!valid()) {
+		if (!isValid()) {
 			return 0;
 		}
 
@@ -810,7 +810,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::setSocketOption(int level, int option, const void* value, size_t length) {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
@@ -823,7 +823,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::getSocketOption(int level, int option, void* value, size_t* length) const {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
@@ -867,7 +867,7 @@ namespace WebSocket {
 	}
 
 	std::pair<Result, std::pair<std::string, uint16_t>> Socket::getSocketAddress() const {
-		if (!valid()) {
+		if (!isValid()) {
 			return { Result(ErrorCode::invalidParameter, "Socket not created"), {"", 0} };
 		}
 
@@ -904,7 +904,7 @@ namespace WebSocket {
 			return Result(ErrorCode::unknownError, "Event loop is already running");
 		}
 
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket is not valid");
 		}
 
@@ -952,7 +952,7 @@ namespace WebSocket {
 
 	// Async I/O Implementation
 	Result Socket::enableAsyncIO() {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
@@ -999,7 +999,7 @@ namespace WebSocket {
 			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
 		}
 
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
@@ -1044,7 +1044,7 @@ namespace WebSocket {
 			return Result(ErrorCode::invalidParameter, "Async I/O not enabled");
 		}
 
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket not created");
 		}
 
@@ -1111,7 +1111,7 @@ namespace WebSocket {
 	}
 
 	Result Socket::processSocketEvents() {
-		if (!valid()) {
+		if (!isValid()) {
 			return Result(ErrorCode::invalidParameter, "Socket is not valid");
 		}
 

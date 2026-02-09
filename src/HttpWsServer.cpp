@@ -315,7 +315,7 @@ void HttpWsServer::handleWebSocketConnection(ClientConnection* client, const std
     }
     
     // Handle WebSocket messages
-    while (!m_shouldStop && client->socket && client->socket->valid()) {
+    while (!m_shouldStop && client->socket && client->socket->isValid()) {
         auto [msgResult, msgData] = client->socket->receive(m_protectionConfig.maxMessageSize);
         if (!msgResult.isSuccess() || msgData.empty()) {
             break;

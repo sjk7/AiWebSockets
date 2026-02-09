@@ -83,7 +83,7 @@ public:
     Result receiveBufferSize(size_t size);
 
     // Getters
-    bool valid() const;
+    bool isValid() const;
     bool blocking() const;
     std::string localAddress() const;
     uint16_t localPort() const;
