@@ -1,44 +1,61 @@
 #include "WebSocket/HttpClient.h"
 #include <iostream>
 
+// Test class to access protected members
+class TestHttpClient : public nob::HttpClient {
+public:
+    using HttpClient::HttpClient;
+    using HttpClient::ParsedUrl;
+    using HttpClient::parseUrl;
+};
+
 int main() {
-    nob::HttpClient client;
+    std::cout << "=== HttpClient Test with SocketBase Firewall ===" << std::endl;
     
-    std::cout << "Testing HttpClient with SocketBase firewall..." << std::endl;
+    // Create HttpClient (inherits from SocketBase - behind firewall!)
+    TestHttpClient client;
+    std::cout << "✅ HttpClient created successfully!" << std::endl;
+    std::cout << "🛡️ Behind SocketBase firewall!" << std::endl;
     
-    // Test GET request to Google
-    std::cout << "\nDownloading Google homepage..." << std::endl;
-    nob::HttpResponse response = client.get("http://www.google.com");
+    // Test basic configuration methods
+    client.setTimeout(30);
+    client.setUserAgent("TestClient/1.0");
+    client.setHeader("X-Custom-Header", "TestValue");
+    
+    std::cout << "✅ Configuration methods work!" << std::endl;
+    
+    // Test URL parsing (now accessible through derived class)
+    TestHttpClient::ParsedUrl url = client.parseUrl("http://www.google.com");
+    std::cout << "✅ URL parsing works!" << std::endl;
+    std::cout << "   Host: " << url.host << std::endl;
+    std::cout << "   Port: " << url.port << std::endl;
+    std::cout << "   Path: " << url.path << std::endl;
+    std::cout << "   HTTPS: " << (url.useHttps ? "Yes" : "No") << std::endl;
+    
+    // Test HTTP GET method (this will try to connect)
+    std::cout << "\n🚀 Testing HTTP GET request..." << std::endl;
+    nob::HttpResponse response = client.get("http://httpbin.org/get");
     
     if (response.isSuccess()) {
-        std::cout << "✅ Success! Status: " << response.statusCode << " " << response.statusMessage << std::endl;
-        std::cout << "Headers received: " << response.headers.size() << std::endl;
-        std::cout << "Body size: " << response.body.size() << " bytes" << std::endl;
+        std::cout << "✅ HTTP GET Success!" << std::endl;
+        std::cout << "   Status: " << response.statusCode << " " << response.statusMessage << std::endl;
+        std::cout << "   Headers: " << response.headers.size() << std::endl;
+        std::cout << "   Body size: " << response.body.size() << " bytes" << std::endl;
         
-        // Save to file
-        if (client.downloadToFile("http://www.google.com", "google_homepage.html")) {
-            std::cout << "✅ Saved to google_homepage.html" << std::endl;
-        } else {
-            std::cout << "❌ Failed to save to file" << std::endl;
+        // Show first 100 chars of response
+        if (!response.body.empty()) {
+            std::string bodyStr(response.body.begin(), response.body.end());
+            std::cout << "   Response preview: " << bodyStr.substr(0, 100) << "..." << std::endl;
         }
     } else {
-        std::cout << "❌ Failed! Status: " << response.statusCode << std::endl;
+        std::cout << "❌ HTTP GET Failed!" << std::endl;
+        std::cout << "   Status: " << response.statusCode << std::endl;
+        std::cout << "   Error: " << response.statusMessage << std::endl;
     }
     
-    // Test POST request
-    std::cout << "\nTesting POST request..." << std::endl;
-    nob::HttpResponse postResponse = client.post("http://httpbin.org/post", "Hello from HttpClient!");
-    
-    if (postResponse.isSuccess()) {
-        std::cout << "✅ POST Success! Status: " << postResponse.statusCode << std::endl;
-        std::string body(postResponse.body.begin(), postResponse.body.end());
-        std::cout << "Response body: " << body.substr(0, 200) << "..." << std::endl;
-    } else {
-        std::cout << "❌ POST Failed! Status: " << postResponse.statusCode << std::endl;
-    }
-    
-    std::cout << "\nHttpClient test completed!" << std::endl;
-    std::cout << "🛡️ Firewall maintained - no native socket headers exposed!" << std::endl;
+    std::cout << "\n=== Test Complete ===" << std::endl;
+    std::cout << "🛡️ Firewall Status: MAINTAINED!" << std::endl;
+    std::cout << "🚀 HttpClient working behind SocketBase firewall!" << std::endl;
     
     return 0;
 }

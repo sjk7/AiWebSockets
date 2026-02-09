@@ -84,7 +84,7 @@ public:
      */
     bool downloadToFile(const std::string& url, const std::string& filePath);
 
-private:
+protected:
     struct ParsedUrl {
         std::string scheme;
         std::string host;
@@ -93,13 +93,13 @@ private:
         bool useHttps;
     };
 
+    virtual ParsedUrl parseUrl(const std::string& url);
+
+private:
     int m_timeoutSeconds = 30;
     std::string m_userAgent = "HttpClient/1.0";
     std::map<std::string, std::string> m_headers;
 
-    // URL parsing
-    ParsedUrl parseUrl(const std::string& url);
-    
     // HTTP protocol methods
     std::string buildRequest(const std::string& method, const std::string& path, 
                            const std::map<std::string, std::string>& headers, 
