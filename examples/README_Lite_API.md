@@ -1,14 +1,14 @@
-# WebSocket Lite API - Simple, Secure, Non-Blocking
+# WebSocket Lite API - Simple, Protected, Non-Blocking
 
 ## Overview
 
-The new WebSocket Lite API provides a simple, secure, and fully non-blocking WebSocket implementation that eliminates boilerplate code and includes all security features by default.
+The new WebSocket Lite API provides a simple, protected, and fully non-blocking WebSocket implementation that eliminates boilerplate code and includes all protection features by default.
 
 ## Key Features
 
 ✅ **100% Non-Blocking** - All operations use non-blocking sockets  
-✅ **Built-in Security** - User-Agent filtering, rate limiting, connection limits  
-✅ **Simple API** - Just a few lines to create a secure WebSocket server  
+✅ **Built-in Protection** - User-Agent filtering, rate limiting, connection limits  
+✅ **Simple API** - Just a few lines to create a protected WebSocket server  
 ✅ **Event-Driven** - Callback-based architecture for easy integration  
 ✅ **Thread-Safe** - Proper connection tracking and management  
 ✅ **Optimized** - Uses the optimized Result class for performance  
@@ -21,7 +21,7 @@ The new WebSocket Lite API provides a simple, secure, and fully non-blocking Web
 #include "WebSocket/WebSocketServerLite.h"
 
 int main() {
-    WebSocketServerLite server(8080);  // Port 8080, security enabled by default
+    WebSocketServerLite server(8080);  // Port 8080, protection enabled by default
     
     server.OnMessage([](const std::string& msg) {
         std::cout << "Received: " << msg << std::endl;
@@ -47,7 +47,7 @@ int main() {
     // Configuration (all optional - sensible defaults provided)
     server.SetPort(8080)
            .SetBindAddress("0.0.0.0")
-           .EnableSecurity(true)  // User-Agent filtering, rate limiting
+           .EnableProtection(true)  // User-Agent filtering, rate limiting
            .SetMaxConnections(100)
            .SetMaxConnectionsPerIP(10);
     
@@ -128,9 +128,9 @@ int main() {
 }
 ```
 
-## Security Features (Built-in)
+## Protection Features (Built-in)
 
-When `EnableSecurity(true)` (default), the server automatically provides:
+When `EnableProtection(true)` (default), the server automatically provides:
 
 ### 🛡️ User-Agent Filtering
 Blocks common attack tools:
@@ -174,7 +174,7 @@ Blocks common attack tools:
 ```cpp
 WebSocketServerLite& SetPort(uint16_t port);
 WebSocketServerLite& SetBindAddress(const std::string& address);
-WebSocketServerLite& EnableSecurity(bool enabled = true);
+WebSocketServerLite& EnableProtection(bool enabled = true);
 WebSocketServerLite& SetMaxConnections(int maxConnections);
 WebSocketServerLite& SetMaxConnectionsPerIP(int maxPerIP);
 ```
@@ -230,7 +230,7 @@ Socket serverSocket;
 auto createResult = serverSocket.Create(SOCKET_FAMILY::IPV4, SOCKET_TYPE::TCP);
 auto bindResult = serverSocket.Bind("127.0.0.1", 8080);
 auto listenResult = serverSocket.Listen(128);
-// ... tons of manual connection handling, security, validation, etc.
+// ... tons of manual connection handling, protection, validation, etc.
 while (true) {
     auto acceptResult = serverSocket.Accept();
     // ... manual client handling in blocking mode
@@ -239,7 +239,7 @@ while (true) {
 
 ### After (Simple, Non-Blocking)
 ```cpp
-// 5 lines of code, all security built-in
+// 5 lines of code, all protection built-in
 WebSocketServerLite server(8080);
 server.OnMessage([](const std::string& msg) { /* handle */ });
 server.Start();

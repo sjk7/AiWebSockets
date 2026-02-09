@@ -11,7 +11,7 @@ A comprehensive, cross-platform C++ WebSocket implementation with server-side fu
 - **TDD Approach**: Test-driven development with CTest
 - **No External Dependencies**: Pure C++ implementation with platform-specific socket APIs
 - **Debugging Ready**: LLDB debugging configuration for Windsurf
-- **Auto-commit**: Git repository with automatic commits after successful builds
+- **High Performance**: Async I/O with 23+ MB/s throughput
 
 ## Architecture
 
@@ -23,7 +23,8 @@ aiWebSockets/
 │   ├── Types.h                # Common types and enums
 │   ├── Socket.h               # Cross-platform socket wrapper
 │   ├── WebSocketProtocol.h    # WebSocket protocol implementation
-│   └── WebSocketServer.h      # WebSocket server implementation
+│   ├── HttpWsServer.h         # HTTP + WebSocket server implementation
+│   └── WebSocketServerLite.h  # Lightweight WebSocket server
 ├── src/                       # Implementation files
 ├── tests/                     # TDD test suite
 ├── examples/                  # Example applications
@@ -134,23 +135,29 @@ cmake --build build --target aiWebSocketsTests --config Debug
 ### Server Example
 
 ```cpp
-#include "WebSocket/WebSocketServer.h"
+#include "WebSocket/HttpWsServer.h"
 
 // Configure server
-ServerConfig config;
-config.Port = 8080;
-config.Host = "0.0.0.0";
+SecurityConfig security;
+security.maxConnectionsPerIP = 10;
+security.maxConnectionsTotal = 100;
 
-// Create and start server
-WebSocketServer server(config);
-server.SetConnectionCallback(OnConnection);
-server.SetMessageCallback(OnMessage);
-server.SetCloseCallback(OnClose);
-server.SetErrorCallback(OnError);
+// Create server
+HttpWsServer server(8080, "0.0.0.0", security);
 
-Result result = server.Start();
-if (result.IsError()) {
-    printf("Failed to start server: %s\n", result.ErrorMessage.c_str());
+// Set up event handlers
+server.OnHttpRequest([](const HTTPRequest& request) -> std::string {
+    return "HTTP Response";
+});
+
+server.OnWebSocketMessage([](const WebSocketMessageWithIP& message) -> std::string {
+    return "Echo: " + message.message.AsText();
+});
+
+// Start server
+auto result = server.Start();
+if (!result.IsSuccess()) {
+    printf("Failed to start server: %s\n", result.GetErrorMessage().c_str());
     return 1;
 }
 ```
