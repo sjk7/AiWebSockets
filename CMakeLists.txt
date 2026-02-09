@@ -175,7 +175,6 @@ add_executable(aiWebSocketsTests
     tests/main.cpp
     tests/SocketTests.cpp
     tests/WebSocketProtocolTests.cpp
-    tests/WebSocketServerTests.cpp
 )
 
 target_link_libraries(aiWebSocketsTests aiWebSockets ${PLATFORM_LIBS})

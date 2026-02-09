@@ -1,5 +1,0 @@
-Diagnostics:
-  Suppress: [unused-includes]
-
-CompileFlags:
-  Add: [-std=c++17]
