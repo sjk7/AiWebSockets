@@ -33,9 +33,10 @@ public:
         : addrInfo_(addrInfo), owns_(owns) {}
 
     /**
-     * @brief Destructor - automatically frees the addrinfo if owned
+     * @brief Destructor - automatically frees the addrinfo if owned and not moved-from
      */
     ~AddrInfoGuard() noexcept {
+        // Only call freeaddrinfo if we own the pointer AND it hasn't been moved-from
         if (owns_ && addrInfo_ != nullptr) {
             freeaddrinfo(addrInfo_);
         }
@@ -143,6 +144,14 @@ public:
     }
 
     /**
+     * @brief Check if this guard is in a valid state (not moved-from)
+     * @return true if the guard is valid and can be safely used
+     */
+    bool isValid() const noexcept {
+        return owns_ && addrInfo_ != nullptr;
+    }
+
+    /**
      * @brief Iterator support for range-based for loops
      */
     struct iterator {
@@ -165,13 +174,15 @@ public:
 
     /**
      * @brief Get iterator to beginning
+     * @return Iterator to first addrinfo, or end() if moved-from
      */
     iterator begin() const noexcept {
-        return iterator(addrInfo_);
+        return iterator(isValid() ? addrInfo_ : nullptr);
     }
 
     /**
      * @brief Get iterator to end
+     * @return Iterator to end (always nullptr)
      */
     iterator end() const noexcept {
         return iterator(nullptr);

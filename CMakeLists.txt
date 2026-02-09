@@ -301,6 +301,11 @@ add_executable(result_optimization_test examples/result_optimization_test.cpp)
 target_link_libraries(result_optimization_test aiWebSockets)
 set_target_properties(result_optimization_test PROPERTIES FOLDER "Tests")
 
+# AddrInfoGuard RAII test
+add_executable(test_addrinfo_raii examples/test_addrinfo_raii.cpp)
+target_link_libraries(test_addrinfo_raii aiWebSockets ${PLATFORM_LIBS})
+set_target_properties(test_addrinfo_raii PROPERTIES FOLDER "Tests")
+
 # Simple server example
 add_executable(simple_server_example examples/simple_server_example.cpp)
 target_link_libraries(simple_server_example aiWebSockets)
@@ -452,6 +457,7 @@ else()
     target_compile_options(user_agent_test PRIVATE -Werror)
     target_compile_options(port_checking_test PRIVATE -Werror)
     target_compile_options(result_optimization_test PRIVATE -Werror)
+    target_compile_options(test_addrinfo_raii PRIVATE -Werror)
     
     # Enable comprehensive warnings
     target_compile_options(aiWebSockets PRIVATE -Wall -Wextra -Wpedantic)
@@ -479,6 +485,7 @@ else()
     target_compile_options(user_agent_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(port_checking_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(result_optimization_test PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(test_addrinfo_raii PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 # Debug information
