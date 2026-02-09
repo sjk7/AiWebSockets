@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <string>
 #include "OS.h"  // Include OS.h to get the correct opaque types
 
 namespace nob {

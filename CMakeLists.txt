@@ -92,6 +92,7 @@ set(SOCKET_SOURCES
     src/Socket.cpp
     src/SocketBase.cpp
     src/AddrInfo.cpp
+    src/HttpClient.cpp
     src/WebSocketProtocol.cpp
     src/ErrorCodes.cpp
     src/WebSocketServerLite.cpp
@@ -109,6 +110,7 @@ set(WEBSOCKET_HEADERS
     include/WebSocket/Types.h
     include/WebSocket/AddrInfo.h
     include/WebSocket/OS.h
+    include/WebSocket/HttpClient.h
 )
 
 # Create library
