@@ -50,45 +50,45 @@ public:
     ~WebSocketServerLite();
     
     // Configuration methods
-    WebSocketServerLite& SetPort(uint16_t port);
-    WebSocketServerLite& SetBindAddress(const std::string& address);
-    WebSocketServerLite& EnableSecurity(bool enabled = true);
-    WebSocketServerLite& SetMaxConnections(int maxConnections);
-    WebSocketServerLite& SetMaxConnectionsPerIP(int maxPerIP);
-    WebSocketServerLite& SetMaxConnectionsPerMinute(int maxPerMinute);
+    WebSocketServerLite& setPort(uint16_t port);
+    WebSocketServerLite& setBindAddress(const std::string& address);
+    WebSocketServerLite& enableSecurity(bool enabled = true);
+    WebSocketServerLite& setMaxConnections(int maxConnections);
+    WebSocketServerLite& setMaxConnectionsPerIP(int maxPerIP);
+    WebSocketServerLite& setMaxConnectionsPerMinute(int maxPerMinute);
     
     // Callback registration
-    WebSocketServerLite& OnMessage(const std::function<void(const std::string&)>& callback);
-    WebSocketServerLite& OnConnect(const std::function<void(const std::string&)>& callback);
-    WebSocketServerLite& OnDisconnect(const std::function<void(const std::string&)>& callback);
-    WebSocketServerLite& OnError(const std::function<void(const Result&)>& callback);
+    WebSocketServerLite& onMessage(const std::function<void(const std::string&)>& callback);
+    WebSocketServerLite& onConnect(const std::function<void(const std::string&)>& callback);
+    WebSocketServerLite& onDisconnect(const std::function<void(const std::string&)>& callback);
+    WebSocketServerLite& onError(const std::function<void(const Result&)>& callback);
     
     // Server control
-    Result Start();
-    Result Stop();
-    bool IsRunning() const { return m_running; }
+    Result start();
+    Result stop();
+    bool isRunning() const { return m_running; }
     
     // Non-blocking event processing
-    Result StartNonBlocking();
-    void ProcessEvents(); // Call this regularly in your main loop
+    Result startNonBlocking();
+    void processEvents(); // Call this regularly in your main loop
     
     // Get server info
-    uint16_t GetPort() const { return m_port; }
-    std::string GetBindAddress() const { return m_bindAddress; }
-    int GetCurrentConnectionCount() const;
+    uint16_t getPort() const { return m_port; }
+    std::string getBindAddress() const { return m_bindAddress; }
+    int getCurrentConnectionCount() const;
 
 private:
     // Internal methods
-    Result InitializeServer();
-    void HandleClientConnection(std::unique_ptr<Socket> clientSocket);
-    bool ValidateHTTPRequest(const std::string& request);
-    Result PerformWebSocketHandshake(Socket& clientSocket, const std::string& request);
-    void SendHTTPResponse(Socket& clientSocket, const std::string& status, const std::string& contentType, const std::string& body);
-    std::string GetClientIP(const Socket& socket, const std::string& httpRequest = "");
+    Result initializeServer();
+    void handleClientConnection(std::unique_ptr<Socket> clientSocket);
+    bool validateHTTPRequest(const std::string& request);
+    Result performWebSocketHandshake(Socket& clientSocket, const std::string& request);
+    void sendHTTPResponse(Socket& clientSocket, const std::string& status, const std::string& contentType, const std::string& body);
+    std::string getClientIP(const Socket& socket, const std::string& httpRequest = "");
     
     // Security methods
-    bool IsConnectionAllowed(const std::string& clientIP);
-    void RemoveConnection(const std::string& clientIP);
+    bool isConnectionAllowed(const std::string& clientIP);
+    void removeConnection(const std::string& clientIP);
 };
 
 } // namespace WebSocket
