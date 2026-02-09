@@ -106,7 +106,7 @@ public:
     // Event loop methods (for server sockets)
     Result startEventLoop();
     Result stopEventLoop();
-    bool eventLoopRunning() const;
+    bool isEventLoopRunning() const;
 
     // Callback types for async events
     using AcceptCallbackFn = std::function<void(std::unique_ptr<Socket>)>;

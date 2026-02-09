@@ -931,7 +931,7 @@ namespace WebSocket {
 		return Result();
 	}
 
-	bool Socket::eventLoopRunning() const {
+	bool Socket::isEventLoopRunning() const {
 		return m_eventLoopRunning.load();
 	}
 
