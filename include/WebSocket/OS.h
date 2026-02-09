@@ -29,25 +29,30 @@ using SOCKET_TYPE_NATIVE = SOCKET;
 static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = INVALID_SOCKET;
 using SOCKET_ERROR_TYPE = int;
 static constexpr SOCKET_ERROR_TYPE SOCK_ERROR = SOCKET_ERROR;
+
+// Opaque types for firewall - these hide the actual native types
+namespace detail {
+    using OpaqueSocketType = SOCKET;  // Still SOCKET but only visible in implementation
+    static constexpr OpaqueSocketType OPAQUE_INVALID_SOCKET = INVALID_SOCKET;
+}
 #else
 using SOCKET_TYPE_NATIVE = int;
 static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = -1;
 using SOCKET_ERROR_TYPE = int;
 static constexpr SOCKET_ERROR_TYPE SOCK_ERROR = -1;
+
+// Opaque types for firewall - these hide the actual native types
+namespace detail {
+    using OpaqueSocketType = int;  // Still int but only visible in implementation
+    static constexpr OpaqueSocketType OPAQUE_INVALID_SOCKET = -1;
+}
 #endif
 
-// Opaque type for headers (only used in SocketBase.h)
-namespace nob {
-    namespace detail {
-        #ifdef _WIN32
-        using OpaqueSocketType = void*;
-        static constexpr OpaqueSocketType OPAQUE_INVALID_SOCKET = nullptr;
-        #else
-        using OpaqueSocketType = int;
-        static constexpr OpaqueSocketType OPAQUE_INVALID_SOCKET = -1;
-        #endif
-    }
-}
+// Platform-specific types - exposed for inheritance (but headers still hidden)
+struct NativeSocketTypes {
+    using SocketType = detail::OpaqueSocketType;  // Use the actual native type
+    static constexpr SocketType INVALID_SOCKET_VALUE = detail::OPAQUE_INVALID_SOCKET;
+};
 
 // Platform-specific address structures
 using sockaddr_storage = struct sockaddr_storage;

@@ -2,29 +2,13 @@
 
 #include <memory>
 #include <string>
+#include "OS.h"  // Include OS.h to get the correct opaque types
 
 namespace nob {
 
 // Forward declarations
 class SocketImpl;
 class Result;
-
-// Forward declaration of detail namespace from OS.h
-namespace detail {
-    #ifdef _WIN32
-    using OpaqueSocketType = void*;
-    static constexpr OpaqueSocketType OPAQUE_INVALID_SOCKET = nullptr;
-    #else
-    using OpaqueSocketType = int;
-    static constexpr OpaqueSocketType OPAQUE_INVALID_SOCKET = -1;
-    #endif
-}
-
-// Platform-specific types - exposed for inheritance (but headers still hidden)
-struct NativeSocketTypes {
-    using SocketType = detail::OpaqueSocketType;  // Opaque type for header
-    static constexpr SocketType INVALID_SOCKET = detail::OPAQUE_INVALID_SOCKET;
-};
 
 /**
  * @brief SocketBase - Compiler firewall class that shields users from native socket headers
