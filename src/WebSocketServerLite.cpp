@@ -512,8 +512,8 @@ void WebSocketServerLite::removeConnection(const std::string& clientIP) {
     
     std::lock_guard<std::mutex> lock(ipConnectionMutex);
     currentConnections--;
-    
-    auto it = ipConnectionMap.find(clientIP);
+
+auto it = ipConnectionMap.find(clientIP);
     if (it != ipConnectionMap.end()) {
         it->second.currentConnections--;
         if (it->second.currentConnections <= 0) {

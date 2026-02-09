@@ -576,6 +576,11 @@ void HttpWsServer::removeConnection(const std::string& ip) {
         return;
     }
     
+    // NOTE: We use find+erase instead of remove_if because:
+// 1. std::map keys are const (std::string), cannot be moved
+// 2. remove_if tries to move elements during algorithm to fill gaps
+// 3. Moving const std::string causes compilation errors
+// 4. find+erase is more efficient for single-element operations
     {
         std::lock_guard<std::mutex> lock(m_connectionMutex);
         auto it = m_connectionMap.find(ip);
