@@ -108,6 +108,17 @@ if(WIN32)
         if(CMAKE_BUILD_TYPE STREQUAL "Release")
             add_compile_options(/O2 /Ob2 /GF)
         endif()
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        # Clang on Windows - use MSVC compatibility mode
+        add_compile_options(--target=x86_64-pc-windows-msvc)
+        add_compile_options(-fms-extensions)
+        add_compile_options(-fms-compatibility-version=19.20)
+        # Link with MSVC standard library
+        add_link_options(--target=x86_64-pc-windows-msvc)
+        add_link_options(-fuse-ld=lld)
+        # Treat warnings as errors
+        add_compile_options(-Werror -Wall -Wextra)
+        # C++17 standard (don't duplicate - already set globally)
     endif()
     
 elseif(APPLE)
