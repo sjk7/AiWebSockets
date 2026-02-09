@@ -358,7 +358,7 @@ namespace WebSocket {
 		return { Result(), totalSent };
 	}
 
-	std::pair<Result, std::vector<uint8_t>> Socket::receiveRaw(void* buffer, size_t bufferSize) {
+	ReceiveResult Socket::receiveRaw(void* buffer, size_t bufferSize) {
 		if (!isValid()) {
 			return { Result(ErrorCode::invalidParameter, "Socket not created"), {} };
 		}
@@ -851,7 +851,7 @@ namespace WebSocket {
 		}
 	}
 
-	std::pair<std::string, uint16_t> Socket::getSocketAddress(const struct sockaddr* addr) const {
+	SocketAddress Socket::getSocketAddress(const struct sockaddr* addr) const {
 		if (!addr) {
 			return { "", 0 };
 		}
@@ -866,7 +866,7 @@ namespace WebSocket {
 		return { "", 0 };
 	}
 
-	std::pair<Result, std::pair<std::string, uint16_t>> Socket::getSocketAddress() const {
+	GetAddressResult Socket::getSocketAddress() const {
 		if (!isValid()) {
 			return { Result(ErrorCode::invalidParameter, "Socket not created"), {"", 0} };
 		}
@@ -888,7 +888,7 @@ namespace WebSocket {
 			return { Result(ErrorCode::socketGetSocknameFailed, errorMsg), {"", 0} };
 		}
 
-		std::pair<std::string, uint16_t> address = getSocketAddress(&addr);
+		SocketAddress address = getSocketAddress(&addr);
 		if (address.first.empty()) {
 			return { Result(ErrorCode::socketAddressParseFailed, "Failed to parse socket address"), {"", 0} };
 		}

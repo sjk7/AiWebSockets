@@ -7,6 +7,9 @@
 
 namespace WebSocket {
 
+// Type aliases for cleaner code
+using MessageReceiveResult = std::pair<Result, std::string>;
+
 class WebSocketClientLite {
 private:
     std::unique_ptr<Socket> m_socket;

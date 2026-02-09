@@ -18,6 +18,9 @@ namespace WebSocket {
 struct HTTPRequest;
 struct ClientConnection;
 
+// Type aliases for cleaner code
+using ReceiveResult = std::pair<Result, std::vector<uint8_t>>;
+
 /**
  * @brief Protection configuration for the HTTP/WebSocket server
  */

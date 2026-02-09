@@ -190,7 +190,7 @@ Result WebSocketClientLite::sendBinary(const std::vector<uint8_t>& data) {
     return sendWebSocketFrame(data, 0x2); // Binary frame opcode
 }
 
-std::pair<Result, std::string> WebSocketClientLite::receiveMessage() {
+MessageReceiveResult WebSocketClientLite::receiveMessage() {
     if (!m_connected || !m_socket) {
         return {Result(ErrorCode::invalidParameter, "Not connected"), ""};
     }

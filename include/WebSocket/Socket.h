@@ -25,6 +25,13 @@
 
 namespace WebSocket {
 
+// Common pair type aliases
+using ReceiveResult = std::pair<Result, std::vector<uint8_t>>;
+using SendResult = std::pair<Result, size_t>;
+using SocketAddress = std::pair<std::string, uint16_t>;
+using AcceptResult = std::pair<Result, std::unique_ptr<Socket>>;
+using GetAddressResult = std::pair<Result, SocketAddress>;
+
 // Platform-specific types
 #ifdef _WIN32
 using SOCKET_TYPE_NATIVE = SOCKET;
@@ -33,11 +40,6 @@ static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = INVALID_SOCKET;
 using SOCKET_TYPE_NATIVE = int;
 static const SOCKET_TYPE_NATIVE INVALID_SOCKET_NATIVE = -1;
 #endif
-
-// Type aliases for cleaner code
-using AcceptResult = std::pair<Result, std::unique_ptr<Socket>>;
-using SendResult = std::pair<Result, size_t>;
-using ReceiveResult = std::pair<Result, std::vector<uint8_t>>;
 
 /**
  * @brief Cross-platform socket wrapper class
@@ -61,19 +63,19 @@ public:
     Result create(socketFamily family, socketType type);
     Result bind(const std::string& address, uint16_t port);
     Result listen(int backlog = 128);
-    std::pair<Result, std::unique_ptr<Socket>> accept();
+    AcceptResult accept();
     Result connect(const std::string& address, uint16_t port);
     Result shutdown();
     Result close();
 
     // Data transmission - Raw methods
     SendResult sendRaw(const void* data, size_t length);
-    std::pair<Result, std::vector<uint8_t>> receiveRaw(void* buffer, size_t bufferSize);
+    ReceiveResult receiveRaw(void* buffer, size_t bufferSize);
 
     // Data transmission - WebSocket-aware methods
     Result send(const std::vector<uint8_t>& data);
-    std::pair<Result, std::vector<uint8_t>> receive(size_t maxLength);
-    std::pair<Result, std::vector<uint8_t>> receive(size_t maxLength, int timeoutMs);
+    ReceiveResult receive(size_t maxLength);
+    ReceiveResult receive(size_t maxLength, int timeoutMs);
 
     // Socket options
     Result blocking(bool blocking);
@@ -169,8 +171,8 @@ private:
     Result setSocketOption(int level, int option, const void* value, size_t length);
     Result getSocketOption(int level, int option, void* value, size_t* length) const;
     void updateLastError();
-    std::pair<std::string, uint16_t> getSocketAddress(const struct sockaddr* addr) const;
-    std::pair<Result, std::pair<std::string, uint16_t>> getSocketAddress() const;
+    SocketAddress getSocketAddress(const struct sockaddr* addr) const;
+    GetAddressResult getSocketAddress() const;
     static std::string getAddressString(const struct sockaddr* addr);
 };
 
